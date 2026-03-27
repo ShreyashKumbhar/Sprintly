@@ -1,0 +1,23 @@
+### VS Code configuration ###
+# Ignore personal settings and workspace state
+.vscode/settings.json
+.vscode/*.code-workspace
+.vscode/*.log
+
+# DO NOT ignore these (keep them shared for the team):
+# !.vscode/extensions.json
+# !.vscode/launch.json
+# !.vscode/tasks.json
+
+### Claude Code configuration ###
+# Ignore personal local settings and session memory
+.claude/settings.local.json
+.claude/projects/
+.claude/memory/
+.claude/plans/
+
+# DO NOT ignore these (keep shared instructions and rules):
+# !.claude/CLAUDE.md
+# !.claude/settings.json
+# !.claude/rules/
+# !.claude/skills/
