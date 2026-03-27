@@ -78,7 +78,7 @@ public class ProjectController {
         return MemberResponse.builder()
                 .userId(pm.getUser().getId())
                 .email(pm.getUser().getEmail())
-                .fullName(pm.getUser().getFullName())
+                .username(pm.getUser().getUsername())
                 .role(pm.getRole().name())
                 .joinedAt(pm.getJoinedAt() != null ? pm.getJoinedAt().toString() : null)
                 .build();

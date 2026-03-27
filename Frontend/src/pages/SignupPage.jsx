@@ -10,7 +10,7 @@ export function SignupPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +19,7 @@ export function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      await signup({ email, password, fullName: fullName || undefined });
+      await signup({ email, password, username });
       navigate("/login", { replace: true });
     } catch (err) {
       setError(
@@ -42,12 +42,17 @@ export function SignupPage() {
       </p>
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <Input
-          id="fullName"
-          label="Full name (optional)"
+          id="username"
+          label="Username"
           type="text"
-          autoComplete="name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          autoComplete="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          minLength={3}
+          maxLength={30}
+          pattern="^[a-zA-Z0-9_]+$"
+          title="Letters, digits, and underscores only"
         />
         <Input
           id="email"
