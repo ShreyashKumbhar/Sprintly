@@ -1,41 +1,21 @@
 import { apiFetch } from "@/api/client";
 
-export function listProjects() {
-  return apiFetch("/api/projects");
-}
+export const listProjects = () => apiFetch("/api/projects");
+export const getProject = (id) => apiFetch(`/api/projects/${id}`);
+export const createProject = (payload) => apiFetch("/api/projects", { method: "POST", json: payload });
+export const updateProject = (id, payload) => apiFetch(`/api/projects/${id}`, { method: "PUT", json: payload });
+export const deleteProject = (id) => apiFetch(`/api/projects/${id}`, { method: "DELETE" });
 
-export function getProject(id) {
-  return apiFetch(`/api/projects/${id}`);
-}
+export const listStages = (projectId) => apiFetch(`/api/projects/${projectId}/stages`);
+export const createStage = (projectId, payload) => apiFetch(`/api/projects/${projectId}/stages`, { method: "POST", json: payload });
+export const deleteStage = (projectId, stageId) => apiFetch(`/api/projects/${projectId}/stages/${stageId}`, { method: "DELETE" });
 
-export function createProject(payload) {
-  return apiFetch("/api/projects", { method: "POST", json: payload });
-}
+export const listProjectTasks = (projectId) => apiFetch(`/api/projects/${projectId}/tasks`);
+export const createTask = (projectId, payload) => apiFetch(`/api/projects/${projectId}/tasks`, { method: "POST", json: payload });
 
-export function updateProject(id, payload) {
-  return apiFetch(`/api/projects/${id}`, { method: "PUT", json: payload });
-}
+export const listMembers = (projectId) => apiFetch(`/api/projects/${projectId}/members`);
+export const removeMember = (projectId, userId) => apiFetch(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
 
-export function deleteProject(id) {
-  return apiFetch(`/api/projects/${id}`, { method: "DELETE" });
-}
+export const sendInvite = (projectId, payload) => apiFetch(`/api/projects/${projectId}/invite`, { method: "POST", json: payload });
 
-export function listStages(projectId) {
-  return apiFetch(`/api/projects/${projectId}/stages`);
-}
-
-export function createStage(projectId, payload) {
-  return apiFetch(`/api/projects/${projectId}/stages`, { method: "POST", json: payload });
-}
-
-export function listProjectTasks(projectId) {
-  return apiFetch(`/api/projects/${projectId}/tasks`);
-}
-
-export function createTask(projectId, payload) {
-  return apiFetch(`/api/projects/${projectId}/tasks`, { method: "POST", json: payload });
-}
-
-export function getDashboardStats() {
-  return apiFetch("/api/dashboard/stats");
-}
+export const getDashboardStats = () => apiFetch("/api/dashboard/stats");

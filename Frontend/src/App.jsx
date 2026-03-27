@@ -6,6 +6,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { BoardPage } from "@/pages/BoardPage";
+import { AcceptInvitePage } from "@/pages/AcceptInvitePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 function GuestRoute({ children }) {
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/board/:projectId?" element={<BoardPage />} />
       </Route>
+      <Route path="/invite/:token" element={<AcceptInvitePage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

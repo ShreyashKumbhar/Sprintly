@@ -3,6 +3,8 @@ package com.example.sprintly.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class DashboardStatsResponse {
@@ -11,4 +13,12 @@ public class DashboardStatsResponse {
     private int overdueTasks;
     private double completionPercent;
     private int totalProjects;
+    private List<StageCount> stagesBreakdown;
+
+    @Data
+    @Builder
+    public static class StageCount {
+        private String stageName;
+        private int count;
+    }
 }

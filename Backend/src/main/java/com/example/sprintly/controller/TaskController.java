@@ -1,31 +1,31 @@
 package com.example.sprintly.controller;
 
+import com.example.sprintly.dto.TaskMoveRequest;
 import com.example.sprintly.dto.TaskRequest;
 import com.example.sprintly.dto.TaskResponse;
-import com.example.sprintly.model.Task;
-import com.example.sprintly.model.TaskPriority;
-import com.example.sprintly.model.User;
-import com.example.sprintly.model.WorkflowStage;
+import com.example.sprintly.model.*;
 import com.example.sprintly.repository.TaskRepository;
 import com.example.sprintly.repository.UserRepository;
 import com.example.sprintly.repository.WorkflowStageRepository;
+import com.example.sprintly.security.RbacService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
 
-    @Autowired
-    private TaskRepository taskRepository;
-
-    @Autowired
-    private WorkflowStageRepository workflowStageRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private TaskRepository taskRepository;
+    @Autowired private WorkflowStageRepository workflowStageRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private RbacService rbacService;
 
     private TaskResponse toTaskResponse(Task t) {
         return TaskResponse.builder()
@@ -43,20 +43,32 @@ public class TaskController {
 
     @GetMapping("/{id}")
     public ResponseEntity<TaskResponse> getTask(@PathVariable Long id) {
-        return taskRepository.findById(id)
-                .map(t -> ResponseEntity.ok(toTaskResponse(t)))
-                .orElse(ResponseEntity.notFound().build());
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+        rbacService.requireRole(task.getProject().getId(),
+                UserRole.owner, UserRole.participant, UserRole.viewer);
+        return ResponseEntity.ok(toTaskResponse(task));
     }
 
+    /** Owner can update anything. Participant can only update tasks assigned to them. */
     @PutMapping("/{id}")
-    public ResponseEntity<TaskResponse> updateTask(
-            @PathVariable Long id,
-            @Valid @RequestBody TaskRequest req) {
-        Task task = taskRepository.findById(id).orElse(null);
-        if (task == null) return ResponseEntity.notFound().build();
+    public ResponseEntity<TaskResponse> updateTask(@PathVariable Long id,
+                                                    @Valid @RequestBody TaskRequest req) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        WorkflowStage stage = workflowStageRepository.findById(req.getStageId()).orElse(null);
-        if (stage == null) return ResponseEntity.badRequest().build();
+        Long projectId = task.getProject().getId();
+        UserRole role = rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
+
+        if (role == UserRole.participant) {
+            String email = rbacService.currentEmail();
+            if (task.getAssignee() == null || !task.getAssignee().getEmail().equals(email)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Participants can only edit their own assigned tasks");
+            }
+        }
+
+        WorkflowStage stage = workflowStageRepository.findById(req.getStageId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stage not found"));
 
         User assignee = null;
         if (req.getAssigneeEmail() != null && !req.getAssigneeEmail().isBlank()) {
@@ -73,12 +85,60 @@ public class TaskController {
         return ResponseEntity.ok(toTaskResponse(taskRepository.save(task)));
     }
 
+    /**
+     * Move a task to a different stage (or reorder within stage).
+     * Owner: can move any task.
+     * Participant: can only move tasks assigned to them.
+     */
+    @PatchMapping("/{id}/move")
+    public ResponseEntity<TaskResponse> moveTask(@PathVariable Long id,
+                                                  @Valid @RequestBody TaskMoveRequest req) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+
+        Long projectId = task.getProject().getId();
+        UserRole role = rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
+
+        if (role == UserRole.participant) {
+            String email = rbacService.currentEmail();
+            if (task.getAssignee() == null || !task.getAssignee().getEmail().equals(email)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Participants can only move their own assigned tasks");
+            }
+        }
+
+        WorkflowStage targetStage = workflowStageRepository.findById(req.getStageId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Target stage not found"));
+
+        if (!targetStage.getProject().getId().equals(projectId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stage does not belong to this project");
+        }
+
+        // Append to end of target stage
+        int newPosition = taskRepository.findByProjectId(projectId).stream()
+                .filter(t -> t.getStage().getId().equals(req.getStageId()) && !t.getId().equals(id))
+                .mapToInt(Task::getPosition).max().orElse(0) + 1;
+
+        task.setStage(targetStage);
+        task.setPosition(newPosition);
+
+        return ResponseEntity.ok(toTaskResponse(taskRepository.save(task)));
+    }
+
+    /** Owner only. */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
-        if (!taskRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+        rbacService.requireRole(task.getProject().getId(), UserRole.owner);
         taskRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** All tasks assigned to the current user across all projects. (FR-22) */
+    @GetMapping("/mine")
+    public List<TaskResponse> myTasks() {
+        User user = userRepository.findByEmail(rbacService.currentEmail()).orElseThrow();
+        return taskRepository.findByAssigneeId(user.getId())
+                .stream().map(this::toTaskResponse).collect(Collectors.toList());
     }
 }
