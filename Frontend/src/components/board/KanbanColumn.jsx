@@ -39,10 +39,10 @@ export function KanbanColumn({ id, name, count, children, onAddTask, canAdd }) {
         )}
       </div>
 
-      {/* Drop zone */}
+      {/* Drop zone — min-h ensures empty columns are large enough to receive drops */}
       <div
         ref={setNodeRef}
-        className="flex flex-1 flex-col gap-2 p-2 min-h-[80px]"
+        className="flex flex-1 flex-col gap-2 p-2 min-h-[120px]"
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {children}

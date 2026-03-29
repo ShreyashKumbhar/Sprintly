@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
 } from "@dnd-kit/core";
 import { StageProgress } from "@/components/board/StageProgress";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
@@ -17,12 +18,40 @@ import { InviteModal } from "@/components/projects/InviteModal";
 import { Button } from "@/components/ui/Button";
 import { UserPlus, Kanban } from "lucide-react";
 import { getProject } from "@/api/projects";
+import { createTask } from "@/api/projects";
 import { moveTask } from "@/api/tasks";
 import { useProjectRole } from "@/hooks/useProjectRole";
 import { useAuth } from "@/context/AuthContext";
 
+const TEMPLATE_TASKS = [
+  { title: "Define problem & requirements", description: "Clearly outline the problem you are solving, target users, and core requirements. Document functional and non-functional requirements.", priority: "high", category: "Planning" },
+  { title: "Choose tech stack", description: "Evaluate and select the technologies, frameworks, and tools best suited for the project. Consider scalability, team expertise, and community support.", priority: "high", category: "Planning" },
+  { title: "UI/UX design", description: "Create wireframes and mockups for all major screens. Focus on user flow, accessibility, and a clean intuitive interface.", priority: "high", category: "Design" },
+  { title: "Database & system design", description: "Design the database schema, define entity relationships, and plan the overall system architecture including APIs and services.", priority: "high", category: "Design" },
+  { title: "Create repo & project structure", description: "Initialize the repository, set up the folder structure, configure linting, formatting, and version control best practices.", priority: "medium", category: "Setup" },
+  { title: "Setup frontend + backend", description: "Bootstrap the frontend and backend projects with the chosen frameworks. Configure build tools, environment variables, and dev servers.", priority: "medium", category: "Setup" },
+  { title: "Build APIs (backend)", description: "Develop RESTful or GraphQL API endpoints for all core features. Implement proper error handling, validation, and response formats.", priority: "high", category: "Development" },
+  { title: "Build UI (frontend)", description: "Implement all UI components and pages based on the design mockups. Ensure responsiveness and cross-browser compatibility.", priority: "high", category: "Development" },
+  { title: "Add authentication", description: "Implement user registration, login, logout, and session management. Secure endpoints with proper authorization checks.", priority: "high", category: "Development" },
+  { title: "Connect frontend + backend", description: "Integrate the frontend with backend APIs. Handle loading states, error responses, and data synchronization between client and server.", priority: "high", category: "Integration" },
+  { title: "Fix bugs", description: "Identify and resolve bugs discovered during integration. Ensure data flows correctly across the entire application stack.", priority: "medium", category: "Integration" },
+  { title: "Test features", description: "Write and run unit tests, integration tests, and end-to-end tests for all major features. Aim for good test coverage on critical paths.", priority: "medium", category: "Testing" },
+  { title: "Handle edge cases", description: "Test and handle boundary conditions, invalid inputs, network failures, and unexpected user behavior gracefully.", priority: "medium", category: "Testing" },
+  { title: "Deploy app (server + domain)", description: "Deploy the application to a hosting platform. Configure the domain, SSL certificates, CI/CD pipeline, and environment variables for production.", priority: "high", category: "Deployment" },
+  { title: "Bug fixes", description: "Monitor the deployed application and address any production bugs or issues reported by users promptly.", priority: "low", category: "Maintenance" },
+  { title: "Improvements", description: "Iterate on user feedback, optimize performance, and add enhancements to improve the overall user experience over time.", priority: "low", category: "Maintenance" },
+];
+
+// Custom collision detection: prefer column (droppable) detection, fall back to rect intersection
+function customCollisionDetection(args) {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+  return rectIntersection(args);
+}
+
 export function BoardPage() {
   const { projectId } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const { role, isOwner } = useProjectRole(projectId);
 
@@ -36,21 +65,56 @@ export function BoardPage() {
   const [showInvite, setShowInvite] = useState(false);
 
   const [activeTask, setActiveTask] = useState(null);
+  const dragOriginStageId = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const templateApplied = useRef(false);
 
   const loadProject = useCallback(() => {
     if (!projectId) return;
     setLoading(true);
-    getProject(projectId)
+    return getProject(projectId)
       .then((p) => {
         setProject(p);
         setStages(p.stages ?? []);
+        return p;
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [projectId]);
 
   useEffect(() => { loadProject(); }, [loadProject]);
+
+  // Apply template tasks when navigated with useTemplate flag
+  useEffect(() => {
+    if (!location.state?.useTemplate || templateApplied.current) return;
+    if (!project || stages.length === 0) return;
+
+    const todoStage = stages.find((s) => s.name.toLowerCase() === "to do");
+    if (!todoStage) return;
+
+    templateApplied.current = true;
+    // Clear the state so refresh doesn't re-trigger
+    window.history.replaceState({}, document.title);
+
+    (async () => {
+      for (const task of TEMPLATE_TASKS) {
+        try {
+          await createTask(projectId, {
+            title: task.title,
+            description: `[${task.category}] ${task.description}`,
+            priority: task.priority,
+            dueDate: null,
+            assigneeEmail: null,
+            stageId: todoStage.id,
+          });
+        } catch {
+          // continue creating remaining tasks
+        }
+      }
+      loadProject();
+    })();
+  }, [project, stages, location.state, projectId, loadProject]);
 
   const allTasks = stages.flatMap((s) => s.tasks ?? []);
   const activeIndex = stages.findIndex(
@@ -67,17 +131,25 @@ export function BoardPage() {
 
   function handleDragStart({ active }) {
     const found = findTaskAndStage(active.id);
-    if (found) setActiveTask(found.task);
+    if (found) {
+      setActiveTask(found.task);
+      dragOriginStageId.current = found.stage.id;
+    }
   }
 
   function handleDragOver({ active, over }) {
     if (!over) return;
     const activeInfo = findTaskAndStage(active.id);
     if (!activeInfo) return;
+
+    // Determine target stage: if hovering over a task, use its parent stage
     let targetStageId = over.id;
     const overTaskInfo = findTaskAndStage(over.id);
     if (overTaskInfo) targetStageId = overTaskInfo.stage.id;
+
+    // Don't update if already in same stage
     if (activeInfo.stage.id === targetStageId) return;
+
     setStages((prev) =>
       prev.map((s) => {
         if (s.id === activeInfo.stage.id)
@@ -91,13 +163,22 @@ export function BoardPage() {
 
   async function handleDragEnd({ active, over }) {
     setActiveTask(null);
-    if (!over) return;
-    const activeInfo = findTaskAndStage(active.id);
-    if (!activeInfo) return;
+    if (!over) {
+      // Dropped outside — reload to restore original position
+      if (dragOriginStageId.current) loadProject();
+      dragOriginStageId.current = null;
+      return;
+    }
+
+    // Determine where the task ended up
     let targetStageId = over.id;
     const overTaskInfo = findTaskAndStage(over.id);
     if (overTaskInfo) targetStageId = overTaskInfo.stage.id;
-    const originalStageId = active.data?.current?.stageId ?? activeInfo.stage.id;
+
+    // Use the saved original stage, not the current one (which may have been moved by handleDragOver)
+    const originalStageId = dragOriginStageId.current;
+    dragOriginStageId.current = null;
+
     if (targetStageId !== originalStageId) {
       try {
         await moveTask(active.id, { stageId: targetStageId });
@@ -194,7 +275,7 @@ export function BoardPage() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={customCollisionDetection}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}

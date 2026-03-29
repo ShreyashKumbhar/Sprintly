@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { createProject } from "@/api/projects";
 import { useProjects } from "@/context/ProjectsContext";
+import { LayoutTemplate, Target } from "lucide-react";
 
 const TEXTAREA_CLASS =
   "w-full resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-body text-slate-900 dark:text-slate-100 outline-none transition duration-150 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
@@ -17,8 +18,9 @@ export function NewProjectModal({ onClose }) {
   const [nameError, setNameError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1); // 1 = form, 2 = choose type
 
-  async function handleSubmit(e) {
+  function handleContinue(e) {
     e.preventDefault();
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -26,16 +28,22 @@ export function NewProjectModal({ onClose }) {
       return;
     }
     setNameError("");
+    setStep(2);
+  }
+
+  async function handleCreate(useTemplate) {
     setSubmitError("");
     setLoading(true);
     try {
       const project = await createProject({
-        name: trimmedName,
+        name: name.trim(),
         description: description.trim() || null,
       });
       await refresh();
       onClose();
-      navigate(`/board/${project.id}`);
+      navigate(`/board/${project.id}`, {
+        state: useTemplate ? { useTemplate: true } : undefined,
+      });
     } catch (err) {
       setSubmitError(err.message || "Failed to create project.");
     } finally {
@@ -43,9 +51,82 @@ export function NewProjectModal({ onClose }) {
     }
   }
 
+  if (step === 2) {
+    return (
+      <Modal title="How do you want to start?" onClose={onClose}>
+        <div className="space-y-4">
+          <p className="text-small text-slate-500 dark:text-slate-400">
+            Choose how to set up your project board.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Custom Goals */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleCreate(false)}
+              className="group flex flex-col items-center gap-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 text-center transition duration-150 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md disabled:opacity-60"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition group-hover:scale-110">
+                <Target className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Custom Goals</p>
+                <p className="mt-1 text-small text-slate-500 dark:text-slate-400">
+                  Start with an empty board and add your own tasks
+                </p>
+              </div>
+            </button>
+
+            {/* Use Template */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleCreate(true)}
+              className="group flex flex-col items-center gap-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 text-center transition duration-150 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md disabled:opacity-60"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 transition group-hover:scale-110">
+                <LayoutTemplate className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">Use Template</p>
+                <p className="mt-1 text-small text-slate-500 dark:text-slate-400">
+                  Pre-filled with planning, design, dev & deployment tasks
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {submitError && (
+            <p className="text-small text-red-600 dark:text-red-400" role="alert">
+              {submitError}
+            </p>
+          )}
+
+          {loading && (
+            <p className="text-small text-center text-slate-500 dark:text-slate-400">
+              Creating project...
+            </p>
+          )}
+
+          <div className="flex justify-start pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setStep(1)}
+              disabled={loading}
+            >
+              Back
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal title="New Project" onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleContinue} className="space-y-4">
         <Input
           id="project-name"
           label="Project name"
@@ -88,11 +169,11 @@ export function NewProjectModal({ onClose }) {
         )}
 
         <div className="flex justify-end gap-3 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={loading}>
-            {loading ? "Creating…" : "Create project"}
+          <Button type="submit" variant="primary">
+            Continue
           </Button>
         </div>
       </form>
