@@ -6,8 +6,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  pointerWithin,
-  rectIntersection,
+  closestCenter,
 } from "@dnd-kit/core";
 import { StageProgress } from "@/components/board/StageProgress";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
@@ -17,7 +16,7 @@ import { TaskDetailPanel } from "@/components/board/TaskDetailPanel";
 import { InviteModal } from "@/components/projects/InviteModal";
 import { Button } from "@/components/ui/Button";
 import { UserPlus, Kanban } from "lucide-react";
-import { getProject } from "@/api/projects";
+import { getProject, listMembers } from "@/api/projects";
 import { createTask } from "@/api/projects";
 import { moveTask } from "@/api/tasks";
 import { useProjectRole } from "@/hooks/useProjectRole";
@@ -42,13 +41,6 @@ const TEMPLATE_TASKS = [
   { title: "Improvements", description: "Iterate on user feedback, optimize performance, and add enhancements to improve the overall user experience over time.", priority: "low", category: "Maintenance" },
 ];
 
-// Custom collision detection: prefer column (droppable) detection, fall back to rect intersection
-function customCollisionDetection(args) {
-  const pointerCollisions = pointerWithin(args);
-  if (pointerCollisions.length > 0) return pointerCollisions;
-  return rectIntersection(args);
-}
-
 export function BoardPage() {
   const { projectId } = useParams();
   const location = useLocation();
@@ -64,11 +56,21 @@ export function BoardPage() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
 
+  const [members, setMembers] = useState([]);
+
   const [activeTask, setActiveTask] = useState(null);
   const dragOriginStageId = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const templateApplied = useRef(false);
+
+  // Load project members
+  useEffect(() => {
+    if (!projectId) return;
+    listMembers(projectId)
+      .then(setMembers)
+      .catch(() => setMembers([]));
+  }, [projectId]);
 
   const loadProject = useCallback(() => {
     if (!projectId) return;
@@ -94,7 +96,6 @@ export function BoardPage() {
     if (!todoStage) return;
 
     templateApplied.current = true;
-    // Clear the state so refresh doesn't re-trigger
     window.history.replaceState({}, document.title);
 
     (async () => {
@@ -129,6 +130,15 @@ export function BoardPage() {
     return null;
   }
 
+  // Resolve the target stage id from whatever `over` points to (column or task)
+  function resolveTargetStageId(overId) {
+    // Check if overId is a stage id directly
+    if (stages.some((s) => s.id === overId)) return overId;
+    // Otherwise it might be a task id — find its parent stage
+    const info = findTaskAndStage(overId);
+    return info ? info.stage.id : null;
+  }
+
   function handleDragStart({ active }) {
     const found = findTaskAndStage(active.id);
     if (found) {
@@ -137,54 +147,36 @@ export function BoardPage() {
     }
   }
 
-  function handleDragOver({ active, over }) {
-    if (!over) return;
+  async function handleDragEnd({ active, over }) {
+    setActiveTask(null);
+    const originalStageId = dragOriginStageId.current;
+    dragOriginStageId.current = null;
+
+    if (!over || !originalStageId) return;
+
+    const targetStageId = resolveTargetStageId(over.id);
+    if (!targetStageId || targetStageId === originalStageId) return;
+
+    // Find the task (still in its original stage since we don't do optimistic moves during drag)
     const activeInfo = findTaskAndStage(active.id);
     if (!activeInfo) return;
 
-    // Determine target stage: if hovering over a task, use its parent stage
-    let targetStageId = over.id;
-    const overTaskInfo = findTaskAndStage(over.id);
-    if (overTaskInfo) targetStageId = overTaskInfo.stage.id;
-
-    // Don't update if already in same stage
-    if (activeInfo.stage.id === targetStageId) return;
-
+    // Optimistic update — move task to end of target stage
     setStages((prev) =>
       prev.map((s) => {
-        if (s.id === activeInfo.stage.id)
+        if (s.id === originalStageId)
           return { ...s, tasks: (s.tasks ?? []).filter((t) => t.id !== active.id) };
         if (s.id === targetStageId)
           return { ...s, tasks: [...(s.tasks ?? []), { ...activeInfo.task, stageId: targetStageId }] };
         return s;
       })
     );
-  }
 
-  async function handleDragEnd({ active, over }) {
-    setActiveTask(null);
-    if (!over) {
-      // Dropped outside — reload to restore original position
-      if (dragOriginStageId.current) loadProject();
-      dragOriginStageId.current = null;
-      return;
-    }
-
-    // Determine where the task ended up
-    let targetStageId = over.id;
-    const overTaskInfo = findTaskAndStage(over.id);
-    if (overTaskInfo) targetStageId = overTaskInfo.stage.id;
-
-    // Use the saved original stage, not the current one (which may have been moved by handleDragOver)
-    const originalStageId = dragOriginStageId.current;
-    dragOriginStageId.current = null;
-
-    if (targetStageId !== originalStageId) {
-      try {
-        await moveTask(active.id, { stageId: targetStageId });
-      } catch {
-        loadProject();
-      }
+    // Persist to backend
+    try {
+      await moveTask(active.id, { stageId: targetStageId });
+    } catch {
+      loadProject();
     }
   }
 
@@ -197,12 +189,22 @@ export function BoardPage() {
   }
 
   function handleTaskUpdated(updated) {
-    setStages((prev) =>
-      prev.map((s) => ({
+    setStages((prev) => {
+      const oldStage = prev.find((s) => (s.tasks ?? []).some((t) => t.id === updated.id));
+      if (oldStage && oldStage.id !== updated.stageId) {
+        return prev.map((s) => {
+          if (s.id === oldStage.id)
+            return { ...s, tasks: (s.tasks ?? []).filter((t) => t.id !== updated.id) };
+          if (s.id === updated.stageId)
+            return { ...s, tasks: [...(s.tasks ?? []), updated] };
+          return s;
+        });
+      }
+      return prev.map((s) => ({
         ...s,
         tasks: (s.tasks ?? []).map((t) => (t.id === updated.id ? updated : t)),
-      }))
-    );
+      }));
+    });
     setSelectedTask(updated);
   }
 
@@ -213,11 +215,9 @@ export function BoardPage() {
     setSelectedTask(null);
   }
 
-  function canDragTask(task) {
+  function canDragTask() {
     if (!role) return false;
-    if (role === "owner") return true;
-    if (role === "participant") return task.assigneeEmail === user?.email;
-    return false;
+    return role === "owner" || role === "participant";
   }
 
   if (!projectId) {
@@ -235,7 +235,6 @@ export function BoardPage() {
 
   return (
     <div className="flex min-h-full">
-      {/* Main board */}
       <div className="flex-1 overflow-auto p-4 lg:p-6">
         {/* Board header */}
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -275,9 +274,8 @@ export function BoardPage() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={customCollisionDetection}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-3 overflow-x-auto pb-4">
@@ -287,7 +285,7 @@ export function BoardPage() {
                 id={col.id}
                 name={col.name}
                 count={(col.tasks ?? []).length}
-                canAdd={isOwner}
+                canAdd={isOwner || role === "participant"}
                 onAddTask={() => setAddTaskModal({ stageId: col.id, stageName: col.name })}
               >
                 {(col.tasks ?? []).map((t) => {
@@ -305,7 +303,7 @@ export function BoardPage() {
                       ownerRole={ownerRole}
                       priority={t.priority}
                       dueLabel={t.dueDate ?? null}
-                      isDragDisabled={!canDragTask(t)}
+                      isDragDisabled={!canDragTask()}
                       onClick={() => setSelectedTask(t)}
                     />
                   );
@@ -329,18 +327,18 @@ export function BoardPage() {
         </DndContext>
       </div>
 
-      {/* Task detail panel */}
+      {/* Task detail modal */}
       {selectedTask && (
-        <aside className="hidden w-72 shrink-0 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 xl:block transition-colors duration-150">
-          <TaskDetailPanel
-            task={selectedTask}
-            stages={stages}
-            role={role}
-            onClose={() => setSelectedTask(null)}
-            onUpdated={handleTaskUpdated}
-            onDeleted={handleTaskDeleted}
-          />
-        </aside>
+        <TaskDetailPanel
+          task={selectedTask}
+          stages={stages}
+          members={members}
+          creatorEmail={project?.creatorEmail}
+          role={role}
+          onClose={() => setSelectedTask(null)}
+          onUpdated={handleTaskUpdated}
+          onDeleted={handleTaskDeleted}
+        />
       )}
 
       {addTaskModal && (
@@ -348,6 +346,8 @@ export function BoardPage() {
           projectId={projectId}
           stageId={addTaskModal.stageId}
           stageName={addTaskModal.stageName}
+          members={members}
+          creatorEmail={project?.creatorEmail}
           onClose={() => setAddTaskModal(null)}
           onCreated={handleTaskCreated}
         />

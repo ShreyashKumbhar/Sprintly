@@ -12,15 +12,22 @@ const FIELD_CLASS =
 const LABEL_CLASS =
   "block text-small font-medium text-slate-600 dark:text-slate-400";
 
-export function NewTaskModal({ projectId, stageId, stageName, onClose, onCreated }) {
+export function NewTaskModal({ projectId, stageId, stageName, members, creatorEmail, onClose, onCreated }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
-  const [assigneeEmail, setAssigneeEmail] = useState("");
+  const [assigneeEmail, setAssigneeEmail] = useState(creatorEmail || "");
   const [titleError, setTitleError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Build assignee options: all members, fallback to creator
+  const assigneeOptions = members && members.length > 0
+    ? members
+    : creatorEmail
+    ? [{ email: creatorEmail, username: creatorEmail }]
+    : [];
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -38,7 +45,7 @@ export function NewTaskModal({ projectId, stageId, stageName, onClose, onCreated
         description: description.trim() || null,
         priority,
         dueDate: dueDate || null,
-        assigneeEmail: assigneeEmail.trim() || null,
+        assigneeEmail: assigneeEmail || null,
         stageId,
       });
       onCreated(task);
@@ -105,13 +112,23 @@ export function NewTaskModal({ projectId, stageId, stageName, onClose, onCreated
           />
         </div>
 
-        <Input
-          id="task-assignee"
-          label="Assign to (optional)"
-          placeholder="member@example.com"
-          value={assigneeEmail}
-          onChange={(e) => setAssigneeEmail(e.target.value)}
-        />
+        <div className="space-y-1.5">
+          <label htmlFor="task-assignee" className={LABEL_CLASS}>
+            Assign to
+          </label>
+          <select
+            id="task-assignee"
+            value={assigneeEmail}
+            onChange={(e) => setAssigneeEmail(e.target.value)}
+            className={FIELD_CLASS}
+          >
+            {assigneeOptions.map((m) => (
+              <option key={m.email} value={m.email}>
+                {m.username || m.email}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {submitError && (
           <p className="text-small text-red-600 dark:text-red-400" role="alert">

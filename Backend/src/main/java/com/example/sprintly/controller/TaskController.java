@@ -50,7 +50,7 @@ public class TaskController {
         return ResponseEntity.ok(toTaskResponse(task));
     }
 
-    /** Owner can update anything. Participant can only update tasks assigned to them. */
+    /** Owner and participant can update any task in the project. */
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> updateTask(@PathVariable Long id,
                                                     @Valid @RequestBody TaskRequest req) {
@@ -58,14 +58,7 @@ public class TaskController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
         Long projectId = task.getProject().getId();
-        UserRole role = rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
-
-        if (role == UserRole.participant) {
-            String email = rbacService.currentEmail();
-            if (task.getAssignee() == null || !task.getAssignee().getEmail().equals(email)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Participants can only edit their own assigned tasks");
-            }
-        }
+        rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
 
         WorkflowStage stage = workflowStageRepository.findById(req.getStageId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stage not found"));
@@ -87,8 +80,7 @@ public class TaskController {
 
     /**
      * Move a task to a different stage (or reorder within stage).
-     * Owner: can move any task.
-     * Participant: can only move tasks assigned to them.
+     * Owner and participant can move any task in the project.
      */
     @PatchMapping("/{id}/move")
     public ResponseEntity<TaskResponse> moveTask(@PathVariable Long id,
@@ -97,14 +89,7 @@ public class TaskController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
         Long projectId = task.getProject().getId();
-        UserRole role = rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
-
-        if (role == UserRole.participant) {
-            String email = rbacService.currentEmail();
-            if (task.getAssignee() == null || !task.getAssignee().getEmail().equals(email)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Participants can only move their own assigned tasks");
-            }
-        }
+        rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
 
         WorkflowStage targetStage = workflowStageRepository.findById(req.getStageId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Target stage not found"));

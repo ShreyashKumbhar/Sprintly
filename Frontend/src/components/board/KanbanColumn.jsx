@@ -1,16 +1,12 @@
 import { Plus } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 export function KanbanColumn({ id, name, count, children, onAddTask, canAdd }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  const taskIds = Array.isArray(children)
-    ? children.map((c) => c?.props?.id).filter(Boolean)
-    : [];
-
   return (
     <div
+      ref={setNodeRef}
       className={`flex min-w-[260px] max-w-[300px] flex-1 flex-col rounded-xl border transition-colors duration-150 ${
         isOver
           ? "border-blue-400 dark:border-blue-500 bg-blue-50/60 dark:bg-blue-900/10"
@@ -39,14 +35,9 @@ export function KanbanColumn({ id, name, count, children, onAddTask, canAdd }) {
         )}
       </div>
 
-      {/* Drop zone — min-h ensures empty columns are large enough to receive drops */}
-      <div
-        ref={setNodeRef}
-        className="flex flex-1 flex-col gap-2 p-2 min-h-[120px]"
-      >
-        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {children}
-        </SortableContext>
+      {/* Task list */}
+      <div className="flex flex-1 flex-col gap-2 p-2 min-h-[120px]">
+        {children}
       </div>
     </div>
   );

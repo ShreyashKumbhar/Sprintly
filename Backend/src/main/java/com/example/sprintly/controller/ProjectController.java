@@ -215,7 +215,7 @@ public class ProjectController {
     @PostMapping("/projects/{projectId}/tasks")
     public ResponseEntity<TaskResponse> createTask(@PathVariable Long projectId,
                                                     @Valid @RequestBody TaskRequest req) {
-        rbacService.requireRole(projectId, UserRole.owner);
+        rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
 
         User creator = userRepository.findByEmail(rbacService.currentEmail()).orElseThrow();
         Project project = projectRepository.findById(projectId)

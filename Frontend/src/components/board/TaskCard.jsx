@@ -1,5 +1,4 @@
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useDraggable } from "@dnd-kit/core";
 import { Calendar } from "lucide-react";
 
 const priorityBorder = {
@@ -34,13 +33,13 @@ export function TaskCard({
     listeners,
     setNodeRef,
     transform,
-    transition,
     isDragging,
-  } = useSortable({ id, disabled: isDragDisabled });
+  } = useDraggable({ id, disabled: isDragDisabled });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
     opacity: isDragging ? 0.45 : 1,
   };
 
