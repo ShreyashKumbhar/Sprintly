@@ -1,12 +1,50 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Calendar, AlertCircle } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import {
+  ArrowRight, Plus, Calendar, AlertCircle,
+  FolderKanban, CheckSquare, TrendingUp, AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useProjects } from "@/context/ProjectsContext";
 import { NewProjectModal } from "@/components/projects/NewProjectModal";
 import { myTasks } from "@/api/tasks";
+
+const STATS = [
+  {
+    key: "totalProjects",
+    label: "Projects",
+    Icon: FolderKanban,
+    numColor: "text-blue-600 dark:text-blue-400",
+    iconBg: "bg-blue-50 dark:bg-blue-900/30",
+    iconColor: "text-blue-600 dark:text-blue-400",
+  },
+  {
+    key: "activeTasks",
+    label: "Active tasks",
+    Icon: CheckSquare,
+    numColor: "text-violet-600 dark:text-violet-400",
+    iconBg: "bg-violet-50 dark:bg-violet-900/30",
+    iconColor: "text-violet-600 dark:text-violet-400",
+  },
+  {
+    key: "completionPercent",
+    label: "Completion",
+    Icon: TrendingUp,
+    suffix: "%",
+    numColor: "text-emerald-600 dark:text-emerald-400",
+    iconBg: "bg-emerald-50 dark:bg-emerald-900/30",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    key: "overdueTasks",
+    label: "Overdue",
+    Icon: AlertTriangle,
+    numColor: "text-red-600 dark:text-red-400",
+    iconBg: "bg-red-50 dark:bg-red-900/30",
+    iconColor: "text-red-600 dark:text-red-400",
+  },
+];
 
 export function DashboardPage() {
   const { projects, stats, loading } = useProjects();
@@ -21,112 +59,149 @@ export function DashboardPage() {
       .finally(() => setTasksLoading(false));
   }, []);
 
-  const fmt = (val) => (loading ? "—" : (val ?? "—"));
   const today = new Date().toISOString().split("T")[0];
+  const fmt = (key, suffix = "") =>
+    loading ? "—" : stats ? `${stats[key] ?? "—"}${suffix}` : "—";
 
   return (
-    <div
-      className="min-h-full p-6 lg:p-8"
-      style={{
-        backgroundImage: `
-          linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px)
-        `,
-        backgroundSize: "24px 24px",
-      }}
-    >
+    <div className="min-h-full p-6 lg:p-8">
       <div className="mx-auto max-w-5xl space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <h1 className="font-display text-page-title font-semibold text-white">Dashboard</h1>
+
+        {/* Page header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-page-title font-semibold text-slate-900 dark:text-slate-50">
+              Dashboard
+            </h1>
+            <p className="mt-0.5 text-body text-slate-500 dark:text-slate-400">
+              Overview of your projects and tasks
+            </p>
+          </div>
           <Button variant="primary" className="!py-2 !text-small" onClick={() => setShowModal(true)}>
             <Plus className="h-4 w-4" /> New Project
           </Button>
         </div>
 
-        {/* Stats row */}
-        <div className="grid gap-4 sm:grid-cols-4">
-          <Card className="p-6">
-            <p className="text-small font-medium uppercase tracking-wide text-gray-500">Projects</p>
-            <p className="mt-2 font-display text-dashboard-num font-semibold text-slate-deep">{fmt(stats?.totalProjects)}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-small font-medium uppercase tracking-wide text-gray-500">Active tasks</p>
-            <p className="mt-2 font-display text-dashboard-num font-semibold text-slate-deep">{fmt(stats?.activeTasks)}</p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-small font-medium uppercase tracking-wide text-gray-500">Completion</p>
-            <p className="mt-2 font-display text-dashboard-num font-semibold text-semantic-success">
-              {loading ? "—" : stats ? `${stats.completionPercent}%` : "—"}
-            </p>
-          </Card>
-          <Card className="p-6">
-            <p className="text-small font-medium uppercase tracking-wide text-gray-500">Overdue</p>
-            <p className="mt-2 font-display text-dashboard-num font-semibold text-semantic-error">{fmt(stats?.overdueTasks)}</p>
-          </Card>
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {STATS.map(({ key, label, Icon, suffix = "", numColor, iconBg, iconColor }) => (
+            <div
+              key={key}
+              className="rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-5 shadow-card"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-small font-medium text-slate-500 dark:text-slate-400">{label}</p>
+                <div className={`rounded-lg p-2 ${iconBg}`}>
+                  <Icon className={`h-4 w-4 ${iconColor}`} />
+                </div>
+              </div>
+              <p className={`font-display text-dashboard-num font-semibold ${numColor}`}>
+                {fmt(key, suffix)}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* My assigned tasks (FR-22) */}
-        <Card className="p-6">
-          <h2 className="font-display text-section-title font-semibold text-slate-deep">My Tasks</h2>
-          {tasksLoading ? (
-            <p className="mt-3 text-small text-gray-500">Loading…</p>
-          ) : assignedTasks.length === 0 ? (
-            <p className="mt-3 text-small text-gray-500">No tasks assigned to you.</p>
-          ) : (
-            <ul className="mt-3 divide-y divide-gray-200">
-              {assignedTasks.map((t) => {
-                const overdue = t.dueDate && t.dueDate < today;
-                return (
-                  <li key={t.id} className="flex items-center justify-between py-2.5 gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-deep text-body">{t.title}</p>
-                      {t.dueDate && (
-                        <span className={`inline-flex items-center gap-1 text-small ${overdue ? "text-semantic-error" : "text-gray-500"}`}>
-                          {overdue && <AlertCircle className="h-3.5 w-3.5" />}
-                          <Calendar className="h-3.5 w-3.5" /> {t.dueDate}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
+        {/* My Tasks */}
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 shadow-card">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 px-6 py-4">
+            <h2 className="font-display text-section-title font-semibold text-slate-900 dark:text-slate-50">
+              My Tasks
+            </h2>
+          </div>
+          <div className="p-6">
+            {tasksLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 dark:border-slate-600 border-t-blue-600" />
+                <span className="text-small text-slate-400">Loading tasks…</span>
+              </div>
+            ) : assignedTasks.length === 0 ? (
+              <div className="flex flex-col items-center py-6 text-center">
+                <CheckSquare className="h-8 w-8 text-slate-300 dark:text-slate-600 mb-2" />
+                <p className="text-body text-slate-500 dark:text-slate-400">
+                  No tasks assigned to you yet.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+                {assignedTasks.map((t) => {
+                  const overdue = t.dueDate && t.dueDate < today;
+                  return (
+                    <li key={t.id} className="flex items-center justify-between py-3 gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-800 dark:text-slate-200 text-body">
+                          {t.title}
+                        </p>
+                        {t.dueDate && (
+                          <span
+                            className={`inline-flex items-center gap-1 text-small mt-0.5 ${
+                              overdue ? "text-red-600 dark:text-red-400" : "text-slate-400 dark:text-slate-500"
+                            }`}
+                          >
+                            {overdue && <AlertCircle className="h-3 w-3" />}
+                            <Calendar className="h-3 w-3" />
+                            {t.dueDate}
+                          </span>
+                        )}
+                      </div>
                       <Badge>{t.priority}</Badge>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
 
-        {/* Projects list */}
+        {/* Projects */}
         {!loading && projects.length > 0 ? (
-          <Card className="p-6">
-            <h2 className="font-display text-section-title font-semibold text-slate-deep">Projects</h2>
-            <ul className="mt-4 divide-y divide-gray-200">
+          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 shadow-card">
+            <div className="border-b border-slate-100 dark:border-slate-700 px-6 py-4">
+              <h2 className="font-display text-section-title font-semibold text-slate-900 dark:text-slate-50">
+                Projects
+              </h2>
+            </div>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-700">
               {projects.map((project) => (
-                <li key={project.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="font-medium text-slate-deep">{project.name}</p>
+                <li
+                  key={project.id}
+                  className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition duration-150"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 dark:text-slate-200">{project.name}</p>
                     {project.description && (
-                      <p className="text-small text-gray-500">{project.description}</p>
+                      <p className="text-small text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-xs">
+                        {project.description}
+                      </p>
                     )}
                   </div>
-                  <Link to={`/board/${project.id}`}
-                    className="inline-flex items-center gap-1 text-small font-medium text-steel hover:underline">
+                  <Link
+                    to={`/board/${project.id}`}
+                    className="ml-4 inline-flex shrink-0 items-center gap-1 text-small font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  >
                     Open board <ArrowRight className="h-3 w-3" />
                   </Link>
                 </li>
               ))}
             </ul>
-          </Card>
+          </div>
         ) : !loading && (
-          <Card className="p-6">
-            <h2 className="font-display text-section-title font-semibold text-slate-deep">No projects yet</h2>
-            <p className="mt-1 text-body text-gray-600">Create your first project to get started.</p>
-            <Button variant="primary" className="mt-4 !py-2 !text-small" onClick={() => setShowModal(true)}>
+          <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-14 text-center">
+            <FolderKanban className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
+            <h2 className="font-display text-section-title font-semibold text-slate-700 dark:text-slate-300">
+              No projects yet
+            </h2>
+            <p className="mt-1 text-body text-slate-500 dark:text-slate-400">
+              Create your first project to get started.
+            </p>
+            <Button
+              variant="primary"
+              className="mt-5 !py-2 !text-small"
+              onClick={() => setShowModal(true)}
+            >
               <Plus className="h-4 w-4" /> Create project
             </Button>
-          </Card>
+          </div>
         )}
       </div>
 

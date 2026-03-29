@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Zap } from "lucide-react";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -19,58 +19,71 @@ export function LoginPage() {
     try {
       await login({ email, password });
     } catch (err) {
-      setError(err.message || "Sign in failed");
+      setError(err.message || "Sign in failed. Check your credentials.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card className="p-8 shadow-card-lift">
-      <h1 className="font-display text-page-title font-semibold text-slate-deep">
-        Sign in
-      </h1>
-      <p className="mt-1 text-body text-gray-600">
-        Use the same credentials as your Spring Boot backend (
-        <code className="text-small">/api/auth/signin</code>).
-      </p>
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-        <Input
-          id="email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <Input
-          id="password"
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        {error && (
-          <p className="text-small text-semantic-error" role="alert">
-            {error}
-          </p>
-        )}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Signing in…" : "Sign in"}
-        </Button>
-      </form>
-      <p className="mt-6 text-center text-small text-gray-600">
+    <div className="space-y-6">
+      {/* Brand */}
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg">
+          <Zap className="h-6 w-6 text-white" />
+        </div>
+        <h1 className="font-display text-2xl font-semibold text-slate-900 dark:text-slate-50">
+          Welcome back
+        </h1>
+        <p className="mt-1 text-body text-slate-500 dark:text-slate-400">
+          Sign in to your Sprintly account
+        </p>
+      </div>
+
+      {/* Form card */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-7 shadow-card">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            id="email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            id="password"
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+
+          {error && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2.5">
+              <p className="text-small text-red-700 dark:text-red-400" role="alert">
+                {error}
+              </p>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full mt-2" disabled={loading}>
+            {loading ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+      </div>
+
+      <p className="text-center text-small text-slate-500 dark:text-slate-400">
         No account?{" "}
-        <Link
-          to="/signup"
-          className="font-medium text-steel hover:underline"
-        >
+        <Link to="/signup" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
           Create one
         </Link>
       </p>
-    </Card>
+    </div>
   );
 }

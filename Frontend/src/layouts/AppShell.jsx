@@ -1,20 +1,18 @@
 import { Outlet } from "react-router-dom";
 import { TopBar } from "@/components/layout/TopBar";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { RightPanel } from "@/components/layout/RightPanel";
 import { ProjectsProvider } from "@/context/ProjectsContext";
 
 export function AppShell() {
   return (
     <ProjectsProvider>
-      <div className="flex min-h-screen flex-col bg-slate-deep">
+      <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-150">
         <TopBar />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex-1 overflow-auto">
             <Outlet />
           </main>
-          <RightPanel />
         </div>
       </div>
     </ProjectsProvider>

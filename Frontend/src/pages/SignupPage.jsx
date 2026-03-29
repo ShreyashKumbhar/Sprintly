@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Zap } from "lucide-react";
 
 export function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,61 +33,79 @@ export function SignupPage() {
   }
 
   return (
-    <Card className="p-8 shadow-card-lift">
-      <h1 className="font-display text-page-title font-semibold text-slate-deep">
-        Create account
-      </h1>
-      <p className="mt-1 text-body text-gray-600">
-        Registers via <code className="text-small">/api/auth/signup</code>.
-      </p>
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-        <Input
-          id="username"
-          label="Username"
-          type="text"
-          autoComplete="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          minLength={3}
-          maxLength={30}
-          pattern="^[a-zA-Z0-9_]+$"
-          title="Letters, digits, and underscores only"
-        />
-        <Input
-          id="email"
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <Input
-          id="password"
-          label="Password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-        />
-        {error && (
-          <p className="text-small text-semantic-error" role="alert">
-            {error}
-          </p>
-        )}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating…" : "Sign up"}
-        </Button>
-      </form>
-      <p className="mt-6 text-center text-small text-gray-600">
+    <div className="space-y-6">
+      {/* Brand */}
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg">
+          <Zap className="h-6 w-6 text-white" />
+        </div>
+        <h1 className="font-display text-2xl font-semibold text-slate-900 dark:text-slate-50">
+          Create account
+        </h1>
+        <p className="mt-1 text-body text-slate-500 dark:text-slate-400">
+          Join Sprintly and manage your sprints
+        </p>
+      </div>
+
+      {/* Form card */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-7 shadow-card">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            id="username"
+            label="Username"
+            type="text"
+            autoComplete="username"
+            placeholder="e.g. johndoe_42"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            minLength={3}
+            maxLength={30}
+            pattern="^[a-zA-Z0-9_]+$"
+            title="Letters, digits, and underscores only (3–30 chars)"
+          />
+          <Input
+            id="email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            id="password"
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Minimum 6 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+          />
+
+          {error && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-3 py-2.5">
+              <p className="text-small text-red-700 dark:text-red-400" role="alert">
+                {error}
+              </p>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full mt-2" disabled={loading}>
+            {loading ? "Creating account…" : "Create account"}
+          </Button>
+        </form>
+      </div>
+
+      <p className="text-center text-small text-slate-500 dark:text-slate-400">
         Already have an account?{" "}
-        <Link to="/login" className="font-medium text-steel hover:underline">
+        <Link to="/login" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
           Sign in
         </Link>
       </p>
-    </Card>
+    </div>
   );
 }

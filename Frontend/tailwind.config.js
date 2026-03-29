@@ -1,17 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
       colors: {
-        slate: {
-          deep: "#0F172A",
-        },
+        "slate-deep": "#0F172A",
         graphite: "#1E293B",
         steel: "#2563EB",
-        cyan: {
-          soft: "#22D3EE",
-        },
+        "cyan-soft": "#22D3EE",
         role: {
           owner: "#7C3AED",
           participant: "#2563EB",
@@ -22,18 +19,10 @@ export default {
           warning: "#F59E0B",
           error: "#EF4444",
           info: "#3B82F6",
-          disabled: "#9CA3AF",
         },
       },
       fontFamily: {
-        sans: [
-          "Inter",
-          "system-ui",
-          "-apple-system",
-          "Segoe UI",
-          "Roboto",
-          "sans-serif",
-        ],
+        sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
         display: ["Space Grotesk", "Inter", "system-ui", "sans-serif"],
       },
       fontSize: {
@@ -45,19 +34,14 @@ export default {
         "dashboard-num": ["32px", { lineHeight: "1.2" }],
       },
       boxShadow: {
-        card: "0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.06)",
-        "card-lift": "0 10px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08)",
+        card: "0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04)",
+        "card-lift": "0 8px 24px -4px rgb(0 0 0 / 0.10), 0 4px 8px -2px rgb(0 0 0 / 0.06)",
         btn: "0 1px 2px rgb(0 0 0 / 0.06)",
-      },
-      transitionDuration: {
-        150: "150ms",
-        200: "200ms",
-        250: "250ms",
       },
       keyframes: {
         "fade-in": {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
+          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
         shake: {
           "0%, 100%": { transform: "translateX(0)" },

@@ -11,22 +11,22 @@ export function Input({
       {label && (
         <label
           htmlFor={id}
-          className="block text-small font-medium text-gray-400"
+          className="block text-small font-medium text-slate-600 dark:text-slate-400"
         >
           {label}
         </label>
       )}
       <input
         id={id}
-        className={`w-full rounded-lg border bg-graphite px-3 py-2.5 text-body text-gray-100 outline-none transition duration-150 placeholder:text-gray-500 focus:border-steel focus:ring-2 focus:ring-steel/30 ${
+        className={`w-full rounded-lg border px-3 py-2.5 text-body text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 outline-none transition duration-150 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 ${
           error
-            ? "border-semantic-error focus:border-semantic-error focus:ring-semantic-error/30"
-            : "border-gray-600"
+            ? "border-red-500 dark:border-red-500 focus:border-red-500 focus:ring-red-500/20"
+            : "border-slate-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-blue-500/20"
         } ${inputClassName}`}
         {...props}
       />
       {error && (
-        <p className="text-small text-semantic-error" role="alert">
+        <p className="text-small text-red-600 dark:text-red-400" role="alert">
           {error}
         </p>
       )}

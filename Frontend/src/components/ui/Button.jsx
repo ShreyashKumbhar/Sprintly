@@ -1,12 +1,12 @@
 const variants = {
   primary:
-    "bg-steel text-white shadow-btn hover:brightness-105 hover:-translate-y-px active:scale-[0.98] disabled:opacity-50",
+    "bg-blue-600 text-white shadow-btn hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
   secondary:
-    "border border-gray-500 bg-transparent text-gray-200 hover:bg-white/5 active:scale-[0.98] disabled:opacity-50",
+    "border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
   danger:
-    "bg-semantic-error text-white shadow-btn hover:brightness-105 active:scale-[0.98] disabled:opacity-50",
+    "bg-red-600 text-white shadow-btn hover:bg-red-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
   ghost:
-    "text-gray-300 hover:bg-white/5 active:scale-[0.98] disabled:opacity-50",
+    "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
 };
 
 export function Button({

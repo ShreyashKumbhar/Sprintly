@@ -9,33 +9,25 @@ import { BoardPage } from "@/pages/BoardPage";
 import { AcceptInvitePage } from "@/pages/AcceptInvitePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
+function Spinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-150">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-blue-600" />
+    </div>
+  );
+}
+
 function GuestRoute({ children }) {
   const { token, bootstrapping } = useAuth();
-  if (bootstrapping) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-deep">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-steel" />
-      </div>
-    );
-  }
-  if (token) {
-    return <Navigate to="/" replace />;
-  }
+  if (bootstrapping) return <Spinner />;
+  if (token) return <Navigate to="/" replace />;
   return children;
 }
 
 function ProtectedRoute({ children }) {
   const { token, bootstrapping } = useAuth();
-  if (bootstrapping) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-deep">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-steel" />
-      </div>
-    );
-  }
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
+  if (bootstrapping) return <Spinner />;
+  if (!token) return <Navigate to="/login" replace />;
   return children;
 }
 

@@ -6,6 +6,12 @@ import { createTask } from "@/api/projects";
 
 const PRIORITIES = ["low", "medium", "high"];
 
+const FIELD_CLASS =
+  "w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-body text-slate-900 dark:text-slate-100 outline-none transition duration-150 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
+
+const LABEL_CLASS =
+  "block text-small font-medium text-slate-600 dark:text-slate-400";
+
 export function NewTaskModal({ projectId, stageId, stageName, onClose, onCreated }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -19,7 +25,10 @@ export function NewTaskModal({ projectId, stageId, stageName, onClose, onCreated
   async function handleSubmit(e) {
     e.preventDefault();
     const trimmed = title.trim();
-    if (!trimmed) { setTitleError("Title is required."); return; }
+    if (!trimmed) {
+      setTitleError("Title is required.");
+      return;
+    }
     setTitleError("");
     setSubmitError("");
     setLoading(true);
@@ -42,42 +51,78 @@ export function NewTaskModal({ projectId, stageId, stageName, onClose, onCreated
   }
 
   return (
-    <Modal title={`Add task to "${stageName}"`} onClose={onClose}>
+    <Modal title={`New task — ${stageName}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input id="task-title" label="Title" placeholder="Task title"
-          value={title} onChange={(e) => setTitle(e.target.value)} error={titleError} autoFocus />
+        <Input
+          id="task-title"
+          label="Title"
+          placeholder="What needs to be done?"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          error={titleError}
+          autoFocus
+        />
 
         <div className="space-y-1.5">
-          <label htmlFor="task-desc" className="block text-small font-medium text-gray-400">
-            Description <span className="font-normal text-gray-500">(optional)</span>
+          <label htmlFor="task-desc" className={LABEL_CLASS}>
+            Description{" "}
+            <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
           </label>
-          <textarea id="task-desc" rows={2} placeholder="Details…"
-            value={description} onChange={(e) => setDescription(e.target.value)}
-            className="w-full resize-none rounded-lg border border-gray-600 bg-graphite px-3 py-2.5 text-body text-gray-100 outline-none transition duration-150 placeholder:text-gray-500 focus:border-steel focus:ring-2 focus:ring-steel/30" />
+          <textarea
+            id="task-desc"
+            rows={2}
+            placeholder="Add more details…"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className={`${FIELD_CLASS} resize-none`}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label htmlFor="task-priority" className="block text-small font-medium text-gray-400">Priority</label>
-            <select id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value)}
-              className="w-full rounded-lg border border-gray-600 bg-graphite px-3 py-2.5 text-body text-gray-100 outline-none focus:border-steel focus:ring-2 focus:ring-steel/30">
+            <label htmlFor="task-priority" className={LABEL_CLASS}>
+              Priority
+            </label>
+            <select
+              id="task-priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              className={FIELD_CLASS}
+            >
               {PRIORITIES.map((p) => (
-                <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                <option key={p} value={p}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </option>
               ))}
             </select>
           </div>
-          <Input id="task-due" label="Due date" type="date"
-            value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Input
+            id="task-due"
+            label="Due date"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
         </div>
 
-        <Input id="task-assignee" label="Assign to (email, optional)"
+        <Input
+          id="task-assignee"
+          label="Assign to (optional)"
           placeholder="member@example.com"
-          value={assigneeEmail} onChange={(e) => setAssigneeEmail(e.target.value)} />
+          value={assigneeEmail}
+          onChange={(e) => setAssigneeEmail(e.target.value)}
+        />
 
-        {submitError && <p className="text-small text-semantic-error" role="alert">{submitError}</p>}
+        {submitError && (
+          <p className="text-small text-red-600 dark:text-red-400" role="alert">
+            {submitError}
+          </p>
+        )}
 
         <div className="flex justify-end gap-3 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
           <Button type="submit" variant="primary" disabled={loading}>
             {loading ? "Creating…" : "Create task"}
           </Button>

@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { createProject } from "@/api/projects";
 import { useProjects } from "@/context/ProjectsContext";
 
+const TEXTAREA_CLASS =
+  "w-full resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-body text-slate-900 dark:text-slate-100 outline-none transition duration-150 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
+
 export function NewProjectModal({ onClose }) {
   const navigate = useNavigate();
   const { refresh } = useProjects();
-
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [nameError, setNameError] = useState("");
@@ -53,13 +55,14 @@ export function NewProjectModal({ onClose }) {
           error={nameError}
           autoFocus
         />
+
         <div className="space-y-1.5">
           <label
             htmlFor="project-desc"
-            className="block text-small font-medium text-gray-400"
+            className="block text-small font-medium text-slate-600 dark:text-slate-400"
           >
             Description{" "}
-            <span className="font-normal text-gray-500">(optional)</span>
+            <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
           </label>
           <textarea
             id="project-desc"
@@ -67,17 +70,23 @@ export function NewProjectModal({ onClose }) {
             placeholder="What is this project about?"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full resize-none rounded-lg border border-gray-600 bg-graphite px-3 py-2.5 text-body text-gray-100 outline-none transition duration-150 placeholder:text-gray-500 focus:border-steel focus:ring-2 focus:ring-steel/30"
+            className={TEXTAREA_CLASS}
           />
         </div>
-        <p className="text-small text-gray-500">
-          Default stages will be created: <span className="text-gray-400">To Do · In Progress · Review · Done</span>
-        </p>
+
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-3 py-2.5">
+          <p className="text-small text-blue-700 dark:text-blue-400">
+            Default stages will be created:{" "}
+            <span className="font-medium">To Do · In Progress · Review · Done</span>
+          </p>
+        </div>
+
         {submitError && (
-          <p className="text-small text-semantic-error" role="alert">
+          <p className="text-small text-red-600 dark:text-red-400" role="alert">
             {submitError}
           </p>
         )}
+
         <div className="flex justify-end gap-3 pt-1">
           <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
