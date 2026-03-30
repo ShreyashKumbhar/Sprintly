@@ -15,12 +15,13 @@ import { NewTaskModal } from "@/components/board/NewTaskModal";
 import { TaskDetailPanel } from "@/components/board/TaskDetailPanel";
 import { InviteModal } from "@/components/projects/InviteModal";
 import { Button } from "@/components/ui/Button";
-import { UserPlus, Kanban } from "lucide-react";
+import { UserPlus, Kanban, BarChart3 } from "lucide-react";
 import { getProject, listMembers } from "@/api/projects";
 import { createTask } from "@/api/projects";
 import { moveTask } from "@/api/tasks";
 import { useProjectRole } from "@/hooks/useProjectRole";
 import { useAuth } from "@/context/AuthContext";
+import { generateGanttChart } from "@/utils/ganttGenerator";
 
 const TEMPLATE_TASKS = [
   { title: "Define problem & requirements", description: "Clearly outline the problem you are solving, target users, and core requirements. Document functional and non-functional requirements.", priority: "high", category: "Planning" },
@@ -252,16 +253,26 @@ export function BoardPage() {
                 : "No project selected"}
             </p>
           </div>
-          {isOwner && (
+          <div className="flex gap-2">
             <Button
               variant="secondary"
-              className="!py-2 !text-small self-start sm:self-auto"
-              onClick={() => setShowInvite(true)}
+              className="!py-2 !text-small"
+              onClick={() => generateGanttChart(project?.name || "Project", stages)}
             >
-              <UserPlus className="h-4 w-4" />
-              Invite
+              <BarChart3 className="h-4 w-4" />
+              Gantt Chart
             </Button>
-          )}
+            {isOwner && (
+              <Button
+                variant="secondary"
+                className="!py-2 !text-small self-start sm:self-auto"
+                onClick={() => setShowInvite(true)}
+              >
+                <UserPlus className="h-4 w-4" />
+                Invite
+              </Button>
+            )}
+          </div>
         </div>
 
         <StageProgress stages={stages} activeIndex={activeIndex >= 0 ? activeIndex : 0} />
