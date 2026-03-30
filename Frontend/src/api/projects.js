@@ -18,4 +18,6 @@ export const removeMember = (projectId, userId) => apiFetch(`/api/projects/${pro
 
 export const sendInvite = (projectId, payload) => apiFetch(`/api/projects/${projectId}/invite`, { method: "POST", json: payload });
 
+export const getProjectGantt = (projectId) => apiFetch(`/api/projects/${projectId}/gantt`);
+
 export const getDashboardStats = () => apiFetch("/api/dashboard/stats");

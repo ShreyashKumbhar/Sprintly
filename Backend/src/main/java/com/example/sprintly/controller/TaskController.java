@@ -5,6 +5,7 @@ import com.example.sprintly.dto.TaskRequest;
 import com.example.sprintly.dto.TaskResponse;
 import com.example.sprintly.model.*;
 import com.example.sprintly.repository.TaskRepository;
+import com.example.sprintly.repository.TaskStatusHistoryRepository;
 import com.example.sprintly.repository.UserRepository;
 import com.example.sprintly.repository.WorkflowStageRepository;
 import com.example.sprintly.security.RbacService;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class TaskController {
 
     @Autowired private TaskRepository taskRepository;
+    @Autowired private TaskStatusHistoryRepository taskStatusHistoryRepository;
     @Autowired private WorkflowStageRepository workflowStageRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private RbacService rbacService;
@@ -68,6 +71,8 @@ public class TaskController {
             assignee = userRepository.findByEmail(req.getAssigneeEmail()).orElse(null);
         }
 
+        boolean stageChanged = !task.getStage().getId().equals(stage.getId());
+
         task.setTitle(req.getTitle());
         task.setDescription(req.getDescription());
         task.setPriority(TaskPriority.valueOf(req.getPriority()));
@@ -75,7 +80,15 @@ public class TaskController {
         task.setAssignee(assignee);
         task.setStage(stage);
 
-        return ResponseEntity.ok(toTaskResponse(taskRepository.save(task)));
+        Task saved = taskRepository.save(task);
+
+        if (stageChanged) {
+            taskStatusHistoryRepository.save(TaskStatusHistory.builder()
+                    .task(saved).stage(stage).stageName(stage.getName())
+                    .enteredAt(OffsetDateTime.now()).build());
+        }
+
+        return ResponseEntity.ok(toTaskResponse(saved));
     }
 
     /**
@@ -106,7 +119,14 @@ public class TaskController {
         task.setStage(targetStage);
         task.setPosition(newPosition);
 
-        return ResponseEntity.ok(toTaskResponse(taskRepository.save(task)));
+        Task saved = taskRepository.save(task);
+
+        // Record status transition
+        taskStatusHistoryRepository.save(TaskStatusHistory.builder()
+                .task(saved).stage(targetStage).stageName(targetStage.getName())
+                .enteredAt(OffsetDateTime.now()).build());
+
+        return ResponseEntity.ok(toTaskResponse(saved));
     }
 
     /** Owner only. */

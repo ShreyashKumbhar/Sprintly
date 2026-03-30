@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AppShell } from "@/layouts/AppShell";
 import { AuthLayout } from "@/layouts/AuthLayout";
+import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -20,7 +21,7 @@ function Spinner() {
 function GuestRoute({ children }) {
   const { token, bootstrapping } = useAuth();
   if (bootstrapping) return <Spinner />;
-  if (token) return <Navigate to="/" replace />;
+  if (token) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -34,6 +35,15 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <Routes>
+      {/* Public home page */}
+      <Route
+        path="/"
+        element={
+          <GuestRoute>
+            <HomePage />
+          </GuestRoute>
+        }
+      />
       <Route element={<AuthLayout />}>
         <Route
           path="/login"
@@ -59,7 +69,7 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/board/:projectId?" element={<BoardPage />} />
       </Route>
       <Route path="/invite/:token" element={<AcceptInvitePage />} />

@@ -4,6 +4,7 @@ import com.example.sprintly.dto.*;
 import com.example.sprintly.model.*;
 import com.example.sprintly.repository.*;
 import com.example.sprintly.security.RbacService;
+import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ public class ProjectController {
     @Autowired private WorkflowStageRepository workflowStageRepository;
     @Autowired private TaskRepository taskRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private TaskStatusHistoryRepository taskStatusHistoryRepository;
     @Autowired private RbacService rbacService;
 
     // ── Mappers ──────────────────────────────────────────────────────────────
@@ -239,7 +241,56 @@ public class ProjectController {
                 .dueDate(req.getDueDate()).assignee(assignee)
                 .creator(creator).position(position).build();
 
-        return ResponseEntity.ok(toTaskResponse(taskRepository.save(task)));
+        task = taskRepository.save(task);
+
+        // Record initial status history
+        taskStatusHistoryRepository.save(TaskStatusHistory.builder()
+                .task(task).stage(stage).stageName(stage.getName())
+                .enteredAt(OffsetDateTime.now()).build());
+
+        return ResponseEntity.ok(toTaskResponse(task));
+    }
+
+    // ── Gantt data ─────────────────────────────────────────────────────────────
+
+    @GetMapping("/projects/{id}/gantt")
+    public ResponseEntity<List<GanttTaskResponse>> getGanttData(@PathVariable Long id) {
+        rbacService.requireRole(id, UserRole.owner, UserRole.participant, UserRole.viewer);
+        if (!projectRepository.existsById(id)) return ResponseEntity.notFound().build();
+
+        List<Task> tasks = taskRepository.findByProjectId(id);
+        List<Long> taskIds = tasks.stream().map(Task::getId).collect(Collectors.toList());
+        List<TaskStatusHistory> allHistory = taskIds.isEmpty() ? List.of()
+                : taskStatusHistoryRepository.findByTaskIdInOrderByEnteredAtAsc(taskIds);
+
+        // Group history by task id
+        var historyByTask = allHistory.stream()
+                .collect(Collectors.groupingBy(h -> h.getTask().getId()));
+
+        List<GanttTaskResponse> result = tasks.stream().map(t -> {
+            List<TaskStatusHistoryResponse> history = historyByTask
+                    .getOrDefault(t.getId(), List.of()).stream()
+                    .map(h -> TaskStatusHistoryResponse.builder()
+                            .stageId(h.getStage().getId())
+                            .stageName(h.getStageName())
+                            .enteredAt(h.getEnteredAt())
+                            .build())
+                    .collect(Collectors.toList());
+
+            return GanttTaskResponse.builder()
+                    .id(t.getId())
+                    .title(t.getTitle())
+                    .description(t.getDescription())
+                    .priority(t.getPriority().name())
+                    .dueDate(t.getDueDate())
+                    .assigneeEmail(t.getAssignee() != null ? t.getAssignee().getEmail() : null)
+                    .currentStage(t.getStage().getName())
+                    .createdAt(t.getCreatedAt())
+                    .statusHistory(history)
+                    .build();
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
     }
 
     // ── Dashboard stats ───────────────────────────────────────────────────────

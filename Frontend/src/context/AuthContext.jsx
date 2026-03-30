@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
       const data = await apiSignIn(credentials);
       setToken(data.token);
       setUser({ email: data.email });
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     },
     [navigate]
   );

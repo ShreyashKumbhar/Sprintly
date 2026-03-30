@@ -16,7 +16,7 @@ export function NotFoundPage() {
         </p>
       </div>
       <Link
-        to="/"
+        to="/dashboard"
         className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-btn transition duration-150 hover:bg-blue-700 active:scale-[0.98]"
       >
         <Home className="h-4 w-4" /> Back home

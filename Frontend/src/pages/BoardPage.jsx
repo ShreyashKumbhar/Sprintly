@@ -16,7 +16,7 @@ import { TaskDetailPanel } from "@/components/board/TaskDetailPanel";
 import { InviteModal } from "@/components/projects/InviteModal";
 import { Button } from "@/components/ui/Button";
 import { UserPlus, Kanban, BarChart3 } from "lucide-react";
-import { getProject, listMembers } from "@/api/projects";
+import { getProject, listMembers, getProjectGantt } from "@/api/projects";
 import { createTask } from "@/api/projects";
 import { moveTask } from "@/api/tasks";
 import { useProjectRole } from "@/hooks/useProjectRole";
@@ -58,6 +58,7 @@ export function BoardPage() {
   const [showInvite, setShowInvite] = useState(false);
 
   const [members, setMembers] = useState([]);
+  const [ganttLoading, setGanttLoading] = useState(false);
 
   const [activeTask, setActiveTask] = useState(null);
   const dragOriginStageId = useRef(null);
@@ -257,10 +258,18 @@ export function BoardPage() {
             <Button
               variant="secondary"
               className="!py-2 !text-small"
-              onClick={() => generateGanttChart(project?.name || "Project", stages)}
+              disabled={ganttLoading}
+              onClick={async () => {
+                setGanttLoading(true);
+                try {
+                  const ganttData = await getProjectGantt(projectId);
+                  generateGanttChart(project?.name || "Project", ganttData);
+                } catch { /* silently fail */ }
+                finally { setGanttLoading(false); }
+              }}
             >
               <BarChart3 className="h-4 w-4" />
-              Gantt Chart
+              {ganttLoading ? "Exporting…" : "Gantt Chart"}
             </Button>
             {isOwner && (
               <Button

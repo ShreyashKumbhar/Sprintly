@@ -29,7 +29,7 @@ export function AcceptInvitePage() {
     setAcceptError(null);
     try {
       await acceptInvitation(token);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setAcceptError(err.message || "Failed to accept invitation.");
       setAccepting(false);
@@ -111,7 +111,7 @@ export function AcceptInvitePage() {
                     ? "Accept & join project"
                     : "Sign in to accept"}
                 </Button>
-                <Button variant="secondary" onClick={() => navigate("/")}>
+                <Button variant="secondary" onClick={() => navigate("/dashboard")}>
                   Decline
                 </Button>
               </div>

@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Plus, Calendar, AlertCircle,
-  FolderKanban, CheckSquare, TrendingUp, AlertTriangle,
+  FolderKanban, CheckSquare, TrendingUp, AlertTriangle, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useProjects } from "@/context/ProjectsContext";
 import { NewProjectModal } from "@/components/projects/NewProjectModal";
 import { myTasks } from "@/api/tasks";
+import { getProjectGantt } from "@/api/projects";
+import { generateGanttChart } from "@/utils/ganttGenerator";
 
 const STATS = [
   {
@@ -47,17 +49,34 @@ const STATS = [
 ];
 
 export function DashboardPage() {
-  const { projects, stats, loading } = useProjects();
+  const { projects, stats, loading, refresh } = useProjects();
   const [showModal, setShowModal] = useState(false);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(true);
 
+  // Refresh stats, projects, and tasks every time dashboard is visited
   useEffect(() => {
+    refresh();
+    setTasksLoading(true);
     myTasks()
       .then(setAssignedTasks)
       .catch(() => setAssignedTasks([]))
       .finally(() => setTasksLoading(false));
-  }, []);
+  }, [refresh]);
+
+  const [ganttLoading, setGanttLoading] = useState(null); // project id being exported
+
+  async function handleGantt(projectId, projectName) {
+    setGanttLoading(projectId);
+    try {
+      const ganttData = await getProjectGantt(projectId);
+      generateGanttChart(projectName, ganttData);
+    } catch {
+      // silently fail
+    } finally {
+      setGanttLoading(null);
+    }
+  }
 
   const today = new Date().toISOString().split("T")[0];
   const fmt = (key, suffix = "") =>
@@ -175,12 +194,24 @@ export function DashboardPage() {
                       </p>
                     )}
                   </div>
-                  <Link
-                    to={`/board/${project.id}`}
-                    className="ml-4 inline-flex shrink-0 items-center gap-1 text-small font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    Open board <ArrowRight className="h-3 w-3" />
-                  </Link>
+                  <div className="ml-4 flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleGantt(project.id, project.name)}
+                      disabled={ganttLoading === project.id}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-small font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition duration-150 disabled:opacity-50"
+                      title="Export Gantt Chart"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      {ganttLoading === project.id ? "Exporting…" : "Gantt"}
+                    </button>
+                    <Link
+                      to={`/board/${project.id}`}
+                      className="inline-flex items-center gap-1 text-small font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Open board <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>

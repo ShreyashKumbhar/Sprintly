@@ -10,7 +10,7 @@ export function TopBar() {
   const { pathname } = useLocation();
 
   const navLinks = [
-    { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/board", label: "Board", icon: Kanban, exact: false },
   ];
 
@@ -19,7 +19,7 @@ export function TopBar() {
       {/* Left: brand + nav */}
       <div className="flex items-center gap-5">
         <Link
-          to="/"
+          to="/dashboard"
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white transition duration-150 hover:text-blue-600 dark:hover:text-blue-400"
         >
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
@@ -30,9 +30,7 @@ export function TopBar() {
 
         <nav className="hidden items-center gap-0.5 sm:flex">
           {navLinks.map(({ to, label, icon: Icon, exact }) => {
-            const active = exact ? pathname === to : pathname.startsWith(to) && to !== "/";
-            const dashActive = to === "/" && pathname === "/";
-            const isActive = active || dashActive;
+            const isActive = exact ? pathname === to : pathname.startsWith(to);
             return (
               <Link
                 key={to}
