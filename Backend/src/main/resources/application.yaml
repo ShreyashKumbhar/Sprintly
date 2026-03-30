@@ -3,9 +3,9 @@ spring:
   application:
     name: sprintly
   datasource:
-    url: jdbc:postgresql://localhost:5432/sprintly
-    username: postgres
-    password: Ayush@19
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/sprintly}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:Ayush@19}
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,5 +15,5 @@ spring:
     show-sql: true
 
 jwt:
-  secret: 9a4f4e354567f1b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9
-  expiration: 86400000
+  secret: ${JWT_SECRET:9a4f4e354567f1b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9f6b9}
+  expiration: ${JWT_EXPIRATION:86400000}
