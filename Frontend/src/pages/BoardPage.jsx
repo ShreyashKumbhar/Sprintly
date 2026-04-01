@@ -47,7 +47,7 @@ export function BoardPage() {
   const { projectId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
-  const { role, isOwner } = useProjectRole(projectId);
+  const { role, isOwner, canMoveTask, canCreateTasks } = useProjectRole(projectId);
 
   const [project, setProject] = useState(null);
   const [stages, setStages] = useState([]);
@@ -89,10 +89,11 @@ export function BoardPage() {
 
   useEffect(() => { loadProject(); }, [loadProject]);
 
-  // Apply template tasks when navigated with useTemplate flag
+  // Apply template tasks when navigated with useTemplate flag (owner only)
   useEffect(() => {
     if (!location.state?.useTemplate || templateApplied.current) return;
     if (!project || stages.length === 0) return;
+    if (!isOwner) return;
 
     const todoStage = stages.find((s) => s.name.toLowerCase() === "to do");
     if (!todoStage) return;
@@ -117,7 +118,7 @@ export function BoardPage() {
       }
       loadProject();
     })();
-  }, [project, stages, location.state, projectId, loadProject]);
+  }, [project, stages, location.state, projectId, loadProject, isOwner]);
 
   const allTasks = stages.flatMap((s) => s.tasks ?? []);
   const activeIndex = stages.findIndex(
@@ -157,6 +158,7 @@ export function BoardPage() {
 
     const activeInfo = findTaskAndStage(active.id);
     if (!activeInfo) return;
+    if (!canMoveTask(activeInfo.task)) return;
 
     const overId = over.id;
     const isOverColumn = stages.some((s) => s.id === overId);
@@ -259,11 +261,6 @@ export function BoardPage() {
     setSelectedTask(null);
   }
 
-  function canDragTask() {
-    if (!role) return false;
-    return role === "owner" || role === "participant";
-  }
-
   if (!projectId) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
@@ -292,7 +289,13 @@ export function BoardPage() {
                 : error
                 ? <span className="text-red-600 dark:text-red-400">{error}</span>
                 : project
-                ? `${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} · ${role ?? "…"}`
+                ? `${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} · ${role ?? "…"}${
+                    role === "viewer"
+                      ? " · read-only"
+                      : role === "participant"
+                      ? " · move assigned tasks only"
+                      : ""
+                  }`
                 : "No project selected"}
             </p>
           </div>
@@ -349,7 +352,7 @@ export function BoardPage() {
                 name={col.name}
                 count={(col.tasks ?? []).length}
                 taskIds={(col.tasks ?? []).map((t) => t.id)}
-                canAdd={isOwner || role === "participant"}
+                canAdd={canCreateTasks}
                 onAddTask={() => setAddTaskModal({ stageId: col.id, stageName: col.name })}
               >
                 {(col.tasks ?? []).map((t) => {
@@ -367,7 +370,7 @@ export function BoardPage() {
                       ownerRole={ownerRole}
                       priority={t.priority}
                       dueLabel={t.dueDate ?? null}
-                      isDragDisabled={!canDragTask()}
+                      isDragDisabled={!canMoveTask(t)}
                       onClick={() => setSelectedTask(t)}
                     />
                   );
@@ -402,7 +405,7 @@ export function BoardPage() {
         />
       )}
 
-      {addTaskModal && (
+      {addTaskModal && canCreateTasks && (
         <NewTaskModal
           projectId={projectId}
           stageId={addTaskModal.stageId}

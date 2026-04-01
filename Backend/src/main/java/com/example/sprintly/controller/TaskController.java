@@ -55,7 +55,7 @@ public class TaskController {
         return ResponseEntity.ok(toTaskResponse(task));
     }
 
-    /** Owner and participant can update any task in the project. */
+    /** Owner only (task field edits, assignment, stage via update). */
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> updateTask(@PathVariable Long id,
                                                     @Valid @RequestBody TaskRequest req) {
@@ -63,7 +63,7 @@ public class TaskController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
         Long projectId = task.getProject().getId();
-        rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
+        rbacService.requireRole(projectId, UserRole.owner);
 
         WorkflowStage stage = workflowStageRepository.findById(req.getStageId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stage not found"));
@@ -95,7 +95,7 @@ public class TaskController {
 
     /**
      * Move a task to a stage and/or reorder within a stage.
-     * Owner and participant can move any task in the project.
+     * Owner: any task. Participant: only tasks assigned to them. Viewer: not allowed.
      * {@code position} is 0-based in the target stage after logically removing this task from its current stage.
      * If {@code position} is null, the task is appended to the end of the target stage.
      */
@@ -107,7 +107,15 @@ public class TaskController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
         Long projectId = task.getProject().getId();
-        rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
+        UserRole memberRole = rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
+        if (memberRole == UserRole.participant) {
+            User assignee = task.getAssignee();
+            String me = rbacService.currentEmail();
+            if (assignee == null || !me.equalsIgnoreCase(assignee.getEmail())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Only the assignee can move this task");
+            }
+        }
 
         WorkflowStage targetStage = workflowStageRepository.findById(req.getStageId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Target stage not found"));
