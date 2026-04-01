@@ -14,9 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -92,10 +94,13 @@ public class TaskController {
     }
 
     /**
-     * Move a task to a different stage (or reorder within stage).
+     * Move a task to a stage and/or reorder within a stage.
      * Owner and participant can move any task in the project.
+     * {@code position} is 0-based in the target stage after logically removing this task from its current stage.
+     * If {@code position} is null, the task is appended to the end of the target stage.
      */
     @PatchMapping("/{id}/move")
+    @Transactional
     public ResponseEntity<TaskResponse> moveTask(@PathVariable Long id,
                                                   @Valid @RequestBody TaskMoveRequest req) {
         Task task = taskRepository.findById(id)
@@ -111,22 +116,56 @@ public class TaskController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stage does not belong to this project");
         }
 
-        // Append to end of target stage
-        int newPosition = taskRepository.findByProjectId(projectId).stream()
-                .filter(t -> t.getStage().getId().equals(req.getStageId()) && !t.getId().equals(id))
-                .mapToInt(Task::getPosition).max().orElse(0) + 1;
+        Long sourceStageId = task.getStage().getId();
+        Long targetStageId = targetStage.getId();
+        boolean stageChanged = !sourceStageId.equals(targetStageId);
 
-        task.setStage(targetStage);
-        task.setPosition(newPosition);
+        List<Task> sourceList = new ArrayList<>(taskRepository.findByStage_IdOrderByPositionAsc(sourceStageId));
+        Task moving = sourceList.stream().filter(t -> t.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+        sourceList.removeIf(t -> t.getId().equals(id));
 
-        Task saved = taskRepository.save(task);
+        Integer insertAt = req.getPosition();
+        if (insertAt == null) {
+            insertAt = sourceStageId.equals(targetStageId) ? sourceList.size()
+                    : taskRepository.findByStage_IdOrderByPositionAsc(targetStageId).size();
+        }
+        insertAt = Math.max(0, insertAt);
 
-        // Record status transition
-        taskStatusHistoryRepository.save(TaskStatusHistory.builder()
-                .task(saved).stage(targetStage).stageName(targetStage.getName())
-                .enteredAt(OffsetDateTime.now()).build());
+        if (sourceStageId.equals(targetStageId)) {
+            List<Task> ordered = new ArrayList<>(sourceList);
+            insertAt = Math.min(insertAt, ordered.size());
+            ordered.add(insertAt, moving);
+            moving.setStage(targetStage);
+            renumberTaskPositions(ordered);
+            taskRepository.saveAll(ordered);
+        } else {
+            renumberTaskPositions(sourceList);
+            taskRepository.saveAll(sourceList);
+
+            List<Task> targetList = new ArrayList<>(taskRepository.findByStage_IdOrderByPositionAsc(targetStageId));
+            insertAt = Math.min(insertAt, targetList.size());
+            moving.setStage(targetStage);
+            targetList.add(insertAt, moving);
+            renumberTaskPositions(targetList);
+            taskRepository.saveAll(targetList);
+        }
+
+        Task saved = taskRepository.findById(id).orElseThrow();
+
+        if (stageChanged) {
+            taskStatusHistoryRepository.save(TaskStatusHistory.builder()
+                    .task(saved).stage(targetStage).stageName(targetStage.getName())
+                    .enteredAt(OffsetDateTime.now()).build());
+        }
 
         return ResponseEntity.ok(toTaskResponse(saved));
+    }
+
+    private void renumberTaskPositions(List<Task> tasks) {
+        for (int i = 0; i < tasks.size(); i++) {
+            tasks.get(i).setPosition(i + 1);
+        }
     }
 
     /** Owner only. */

@@ -6,11 +6,12 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
+  closestCorners,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { StageProgress } from "@/components/board/StageProgress";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
-import { TaskCard } from "@/components/board/TaskCard";
+import { TaskCard, TaskCardPreview } from "@/components/board/TaskCard";
 import { NewTaskModal } from "@/components/board/NewTaskModal";
 import { TaskDetailPanel } from "@/components/board/TaskDetailPanel";
 import { InviteModal } from "@/components/projects/InviteModal";
@@ -61,7 +62,6 @@ export function BoardPage() {
   const [ganttLoading, setGanttLoading] = useState(false);
 
   const [activeTask, setActiveTask] = useState(null);
-  const dragOriginStageId = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const templateApplied = useRef(false);
@@ -132,51 +132,93 @@ export function BoardPage() {
     return null;
   }
 
-  // Resolve the target stage id from whatever `over` points to (column or task)
-  function resolveTargetStageId(overId) {
-    // Check if overId is a stage id directly
-    if (stages.some((s) => s.id === overId)) return overId;
-    // Otherwise it might be a task id — find its parent stage
-    const info = findTaskAndStage(overId);
+  function findContainer(lookupId) {
+    if (stages.some((s) => s.id === lookupId)) return lookupId;
+    const info = findTaskAndStage(lookupId);
     return info ? info.stage.id : null;
   }
 
   function handleDragStart({ active }) {
     const found = findTaskAndStage(active.id);
-    if (found) {
-      setActiveTask(found.task);
-      dragOriginStageId.current = found.stage.id;
-    }
+    if (found) setActiveTask(found.task);
+  }
+
+  function handleDragCancel() {
+    setActiveTask(null);
   }
 
   async function handleDragEnd({ active, over }) {
     setActiveTask(null);
-    const originalStageId = dragOriginStageId.current;
-    dragOriginStageId.current = null;
+    if (!over || active.id === over.id) return;
 
-    if (!over || !originalStageId) return;
+    const activeContainer = findContainer(active.id);
+    const overContainer = findContainer(over.id);
+    if (!activeContainer || !overContainer) return;
 
-    const targetStageId = resolveTargetStageId(over.id);
-    if (!targetStageId || targetStageId === originalStageId) return;
-
-    // Find the task (still in its original stage since we don't do optimistic moves during drag)
     const activeInfo = findTaskAndStage(active.id);
     if (!activeInfo) return;
 
-    // Optimistic update — move task to end of target stage
+    const overId = over.id;
+    const isOverColumn = stages.some((s) => s.id === overId);
+
+    if (activeContainer === overContainer) {
+      const stage = stages.find((s) => s.id === activeContainer);
+      const tasks = [...(stage.tasks ?? [])];
+      const oldIndex = tasks.findIndex((t) => t.id === active.id);
+      if (oldIndex === -1) return;
+
+      let newIndex;
+      if (isOverColumn) {
+        newIndex = Math.max(0, tasks.length - 1);
+      } else {
+        newIndex = tasks.findIndex((t) => t.id === overId);
+      }
+      if (newIndex === -1) return;
+      if (oldIndex === newIndex) return;
+
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      setStages((prev) =>
+        prev.map((s) => (s.id === activeContainer ? { ...s, tasks: newTasks } : s))
+      );
+
+      const position = newTasks.findIndex((t) => t.id === active.id);
+      try {
+        await moveTask(active.id, { stageId: activeContainer, position });
+      } catch {
+        loadProject();
+      }
+      return;
+    }
+
+    const sourceStage = stages.find((s) => s.id === activeContainer);
+    const targetStage = stages.find((s) => s.id === overContainer);
+    const sourceTasks = [...(sourceStage.tasks ?? [])];
+    const targetTasks = [...(targetStage.tasks ?? [])];
+    const activeIdx = sourceTasks.findIndex((t) => t.id === active.id);
+    if (activeIdx === -1) return;
+
+    const [moved] = sourceTasks.splice(activeIdx, 1);
+    let insertIndex;
+    if (isOverColumn) {
+      insertIndex = targetTasks.length;
+    } else {
+      insertIndex = targetTasks.findIndex((t) => t.id === overId);
+    }
+    if (insertIndex === -1) insertIndex = targetTasks.length;
+
+    const updatedMoved = { ...moved, stageId: overContainer };
+    targetTasks.splice(insertIndex, 0, updatedMoved);
+
     setStages((prev) =>
       prev.map((s) => {
-        if (s.id === originalStageId)
-          return { ...s, tasks: (s.tasks ?? []).filter((t) => t.id !== active.id) };
-        if (s.id === targetStageId)
-          return { ...s, tasks: [...(s.tasks ?? []), { ...activeInfo.task, stageId: targetStageId }] };
+        if (s.id === activeContainer) return { ...s, tasks: sourceTasks };
+        if (s.id === overContainer) return { ...s, tasks: targetTasks };
         return s;
       })
     );
 
-    // Persist to backend
     try {
-      await moveTask(active.id, { stageId: targetStageId });
+      await moveTask(active.id, { stageId: overContainer, position: insertIndex });
     } catch {
       loadProject();
     }
@@ -294,8 +336,9 @@ export function BoardPage() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={closestCorners}
           onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-3 overflow-x-auto pb-4">
@@ -305,6 +348,7 @@ export function BoardPage() {
                 id={col.id}
                 name={col.name}
                 count={(col.tasks ?? []).length}
+                taskIds={(col.tasks ?? []).map((t) => t.id)}
                 canAdd={isOwner || role === "participant"}
                 onAddTask={() => setAddTaskModal({ stageId: col.id, stageName: col.name })}
               >
@@ -334,13 +378,10 @@ export function BoardPage() {
 
           <DragOverlay>
             {activeTask && (
-              <TaskCard
-                id={activeTask.id}
+              <TaskCardPreview
                 title={activeTask.title}
-                ownerRole="participant"
                 priority={activeTask.priority}
                 dueLabel={activeTask.dueDate ?? null}
-                isDragDisabled
               />
             )}
           </DragOverlay>
