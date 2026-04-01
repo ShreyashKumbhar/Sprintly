@@ -180,7 +180,9 @@ export function DashboardPage() {
                 Projects
               </h2>
             </div>
+
             <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+
               {projects.map((project) => (
                 <li
                   key={project.id}

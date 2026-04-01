@@ -55,7 +55,7 @@ export function HomePage() {
 
       {/* Hero */}
       <main className="flex-1">
-        <section className="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center lg:pt-28 lg:pb-20">
+        <section className="mx-auto max-w-4xl px-6 pt-10 pb-16 text-center lg:pt-15 lg:pb-20">
           <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-400">
             <CheckCircle2 className="h-3.5 w-3.5" />
             Free &amp; open-source project management
@@ -65,8 +65,8 @@ export function HomePage() {
             <span className="text-blue-600 dark:text-blue-400">ship faster</span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-lg text-slate-500 dark:text-slate-400">
-            Sprintly helps small teams organize work with kanban boards,
-            real-time collaboration, and timeline exports — all in one place.
+            Sprintly helps teams organize work with kanban boards,
+            real-time collaboration, and timeline exports - all in one place.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link

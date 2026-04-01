@@ -17,6 +17,7 @@ export function NewProjectModal({ onClose }) {
   const [description, setDescription] = useState("");
   const [nameError, setNameError] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [category, setCategory] = useState("Select");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1 = form, 2 = choose type
 
@@ -71,7 +72,9 @@ export function NewProjectModal({ onClose }) {
                 <Target className="h-6 w-6" />
               </div>
               <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Custom Goals</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  Custom Goals
+                </p>
                 <p className="mt-1 text-small text-slate-500 dark:text-slate-400">
                   Start with an empty board and add your own tasks
                 </p>
@@ -89,7 +92,9 @@ export function NewProjectModal({ onClose }) {
                 <LayoutTemplate className="h-6 w-6" />
               </div>
               <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-200">Use Template</p>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  Use Template
+                </p>
                 <p className="mt-1 text-small text-slate-500 dark:text-slate-400">
                   Pre-filled with planning, design, dev & deployment tasks
                 </p>
@@ -98,7 +103,10 @@ export function NewProjectModal({ onClose }) {
           </div>
 
           {submitError && (
-            <p className="text-small text-red-600 dark:text-red-400" role="alert">
+            <p
+              className="text-small text-red-600 dark:text-red-400"
+              role="alert"
+            >
               {submitError}
             </p>
           )}
@@ -137,13 +145,15 @@ export function NewProjectModal({ onClose }) {
           autoFocus
         />
 
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" >
           <label
             htmlFor="project-desc"
             className="block text-small font-medium text-slate-600 dark:text-slate-400"
           >
             Description{" "}
-            <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+            <span className="font-normal text-slate-400 dark:text-slate-500 ">
+              (optional)
+            </span>
           </label>
           <textarea
             id="project-desc"
@@ -155,12 +165,105 @@ export function NewProjectModal({ onClose }) {
           />
         </div>
 
-        <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-3 py-2.5">
-          <p className="text-small text-blue-700 dark:text-blue-400">
-            Default stages will be created:{" "}
-            <span className="font-medium">To Do · In Progress · Review · Done</span>
-          </p>
+        {/*select category of project */}
+        <div className="space-y-1.5" id="spacexx" >
+      <label className="block text-small font-medium text-slate-600 dark:text-slate-400" >
+        Category
+      </label>
+
+      <div className="select" >
+        {/* Selected display */}
+        <div className="selected">
+          {category}
+          <svg
+            height="1em"
+            viewBox="0 0 512 512"
+            className="arrow"
+          >
+            <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z" />
+          </svg>
         </div>
+
+        {/* Options */}
+        <div className="options">
+          <div>
+            <input
+              id="all"
+              name="option"
+              type="radio"
+              defaultChecked
+              onChange={() => setCategory("Select")}
+            />
+            <label className="option" htmlFor="all" data-txt="Select" />
+          </div>
+
+          <div>
+            <input
+              id="web"
+              name="option"
+              type="radio"
+              onChange={() => setCategory("Web Development")}
+            />
+            <label
+              className="option"
+              htmlFor="web"
+              data-txt="Web Development"
+            />
+          </div>
+
+          <div>
+            <input
+              id="mobile"
+              name="option"
+              type="radio"
+              onChange={() => setCategory("Mobile Development")}
+            />
+            <label
+              className="option"
+              htmlFor="mobile"
+              data-txt="Mobile Development"
+            />
+          </div>
+
+          <div>
+            <input
+              id="design"
+              name="option"
+              type="radio"
+              onChange={() => setCategory("Design")}
+            />
+            <label className="option" htmlFor="design" data-txt="Design" />
+          </div>
+
+          <div>
+            <input
+              id="marketing"
+              name="option"
+              type="radio"
+              onChange={() => setCategory("Marketing")}
+            />
+            <label
+              className="option"
+              htmlFor="marketing"
+              data-txt="Marketing"
+            />
+          </div>
+
+          <div>
+            <input
+              id="other"
+              name="option"
+              type="radio"
+              onChange={() => setCategory("Other")}
+            />
+            <label className="option" htmlFor="other" data-txt="Other" />
+          </div>
+        </div>
+      </div>
+
+      {/* Optional: show selected value */}
+      {/* <p className="text-sm">Selected: {category}</p> */}
+    </div>
 
         {submitError && (
           <p className="text-small text-red-600 dark:text-red-400" role="alert">
