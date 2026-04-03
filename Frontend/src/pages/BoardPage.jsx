@@ -6,12 +6,11 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
 } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
 import { StageProgress } from "@/components/board/StageProgress";
 import { KanbanColumn } from "@/components/board/KanbanColumn";
-import { TaskCard, TaskCardPreview } from "@/components/board/TaskCard";
+import { TaskCard } from "@/components/board/TaskCard";
 import { NewTaskModal } from "@/components/board/NewTaskModal";
 import { TaskDetailPanel } from "@/components/board/TaskDetailPanel";
 import { InviteModal } from "@/components/projects/InviteModal";
@@ -47,7 +46,7 @@ export function BoardPage() {
   const { projectId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
-  const { role, isOwner, canMoveTask, canCreateTasks } = useProjectRole(projectId);
+  const { role, isOwner } = useProjectRole(projectId);
 
   const [project, setProject] = useState(null);
   const [stages, setStages] = useState([]);
@@ -62,6 +61,7 @@ export function BoardPage() {
   const [ganttLoading, setGanttLoading] = useState(false);
 
   const [activeTask, setActiveTask] = useState(null);
+  const dragOriginStageId = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const templateApplied = useRef(false);
@@ -89,11 +89,10 @@ export function BoardPage() {
 
   useEffect(() => { loadProject(); }, [loadProject]);
 
-  // Apply template tasks when navigated with useTemplate flag (owner only)
+  // Apply template tasks when navigated with useTemplate flag
   useEffect(() => {
     if (!location.state?.useTemplate || templateApplied.current) return;
     if (!project || stages.length === 0) return;
-    if (!isOwner) return;
 
     const todoStage = stages.find((s) => s.name.toLowerCase() === "to do");
     if (!todoStage) return;
@@ -118,7 +117,7 @@ export function BoardPage() {
       }
       loadProject();
     })();
-  }, [project, stages, location.state, projectId, loadProject, isOwner]);
+  }, [project, stages, location.state, projectId, loadProject]);
 
   const allTasks = stages.flatMap((s) => s.tasks ?? []);
   const activeIndex = stages.findIndex(
@@ -133,94 +132,51 @@ export function BoardPage() {
     return null;
   }
 
-  function findContainer(lookupId) {
-    if (stages.some((s) => s.id === lookupId)) return lookupId;
-    const info = findTaskAndStage(lookupId);
+  // Resolve the target stage id from whatever `over` points to (column or task)
+  function resolveTargetStageId(overId) {
+    // Check if overId is a stage id directly
+    if (stages.some((s) => s.id === overId)) return overId;
+    // Otherwise it might be a task id — find its parent stage
+    const info = findTaskAndStage(overId);
     return info ? info.stage.id : null;
   }
 
   function handleDragStart({ active }) {
     const found = findTaskAndStage(active.id);
-    if (found) setActiveTask(found.task);
-  }
-
-  function handleDragCancel() {
-    setActiveTask(null);
+    if (found) {
+      setActiveTask(found.task);
+      dragOriginStageId.current = found.stage.id;
+    }
   }
 
   async function handleDragEnd({ active, over }) {
     setActiveTask(null);
-    if (!over || active.id === over.id) return;
+    const originalStageId = dragOriginStageId.current;
+    dragOriginStageId.current = null;
 
-    const activeContainer = findContainer(active.id);
-    const overContainer = findContainer(over.id);
-    if (!activeContainer || !overContainer) return;
+    if (!over || !originalStageId) return;
 
+    const targetStageId = resolveTargetStageId(over.id);
+    if (!targetStageId || targetStageId === originalStageId) return;
+
+    // Find the task (still in its original stage since we don't do optimistic moves during drag)
     const activeInfo = findTaskAndStage(active.id);
     if (!activeInfo) return;
-    if (!canMoveTask(activeInfo.task)) return;
 
-    const overId = over.id;
-    const isOverColumn = stages.some((s) => s.id === overId);
-
-    if (activeContainer === overContainer) {
-      const stage = stages.find((s) => s.id === activeContainer);
-      const tasks = [...(stage.tasks ?? [])];
-      const oldIndex = tasks.findIndex((t) => t.id === active.id);
-      if (oldIndex === -1) return;
-
-      let newIndex;
-      if (isOverColumn) {
-        newIndex = Math.max(0, tasks.length - 1);
-      } else {
-        newIndex = tasks.findIndex((t) => t.id === overId);
-      }
-      if (newIndex === -1) return;
-      if (oldIndex === newIndex) return;
-
-      const newTasks = arrayMove(tasks, oldIndex, newIndex);
-      setStages((prev) =>
-        prev.map((s) => (s.id === activeContainer ? { ...s, tasks: newTasks } : s))
-      );
-
-      const position = newTasks.findIndex((t) => t.id === active.id);
-      try {
-        await moveTask(active.id, { stageId: activeContainer, position });
-      } catch {
-        loadProject();
-      }
-      return;
-    }
-
-    const sourceStage = stages.find((s) => s.id === activeContainer);
-    const targetStage = stages.find((s) => s.id === overContainer);
-    const sourceTasks = [...(sourceStage.tasks ?? [])];
-    const targetTasks = [...(targetStage.tasks ?? [])];
-    const activeIdx = sourceTasks.findIndex((t) => t.id === active.id);
-    if (activeIdx === -1) return;
-
-    const [moved] = sourceTasks.splice(activeIdx, 1);
-    let insertIndex;
-    if (isOverColumn) {
-      insertIndex = targetTasks.length;
-    } else {
-      insertIndex = targetTasks.findIndex((t) => t.id === overId);
-    }
-    if (insertIndex === -1) insertIndex = targetTasks.length;
-
-    const updatedMoved = { ...moved, stageId: overContainer };
-    targetTasks.splice(insertIndex, 0, updatedMoved);
-
+    // Optimistic update — move task to end of target stage
     setStages((prev) =>
       prev.map((s) => {
-        if (s.id === activeContainer) return { ...s, tasks: sourceTasks };
-        if (s.id === overContainer) return { ...s, tasks: targetTasks };
+        if (s.id === originalStageId)
+          return { ...s, tasks: (s.tasks ?? []).filter((t) => t.id !== active.id) };
+        if (s.id === targetStageId)
+          return { ...s, tasks: [...(s.tasks ?? []), { ...activeInfo.task, stageId: targetStageId }] };
         return s;
       })
     );
 
+    // Persist to backend
     try {
-      await moveTask(active.id, { stageId: overContainer, position: insertIndex });
+      await moveTask(active.id, { stageId: targetStageId });
     } catch {
       loadProject();
     }
@@ -261,6 +217,11 @@ export function BoardPage() {
     setSelectedTask(null);
   }
 
+  function canDragTask() {
+    if (!role) return false;
+    return role === "owner" || role === "participant";
+  }
+
   if (!projectId) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
@@ -289,13 +250,7 @@ export function BoardPage() {
                 : error
                 ? <span className="text-red-600 dark:text-red-400">{error}</span>
                 : project
-                ? `${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} · ${role ?? "…"}${
-                    role === "viewer"
-                      ? " · read-only"
-                      : role === "participant"
-                      ? " · move assigned tasks only"
-                      : ""
-                  }`
+                ? `${allTasks.length} task${allTasks.length !== 1 ? "s" : ""} · ${role ?? "…"}`
                 : "No project selected"}
             </p>
           </div>
@@ -339,9 +294,8 @@ export function BoardPage() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
-          onDragCancel={handleDragCancel}
           onDragEnd={handleDragEnd}
         >
           <div className="flex gap-3 overflow-x-auto pb-4">
@@ -351,8 +305,7 @@ export function BoardPage() {
                 id={col.id}
                 name={col.name}
                 count={(col.tasks ?? []).length}
-                taskIds={(col.tasks ?? []).map((t) => t.id)}
-                canAdd={canCreateTasks}
+                canAdd={isOwner || role === "participant"}
                 onAddTask={() => setAddTaskModal({ stageId: col.id, stageName: col.name })}
               >
                 {(col.tasks ?? []).map((t) => {
@@ -370,7 +323,7 @@ export function BoardPage() {
                       ownerRole={ownerRole}
                       priority={t.priority}
                       dueLabel={t.dueDate ?? null}
-                      isDragDisabled={!canMoveTask(t)}
+                      isDragDisabled={!canDragTask()}
                       onClick={() => setSelectedTask(t)}
                     />
                   );
@@ -381,10 +334,13 @@ export function BoardPage() {
 
           <DragOverlay>
             {activeTask && (
-              <TaskCardPreview
+              <TaskCard
+                id={activeTask.id}
                 title={activeTask.title}
+                ownerRole="participant"
                 priority={activeTask.priority}
                 dueLabel={activeTask.dueDate ?? null}
+                isDragDisabled
               />
             )}
           </DragOverlay>
@@ -405,7 +361,7 @@ export function BoardPage() {
         />
       )}
 
-      {addTaskModal && canCreateTasks && (
+      {addTaskModal && (
         <NewTaskModal
           projectId={projectId}
           stageId={addTaskModal.stageId}

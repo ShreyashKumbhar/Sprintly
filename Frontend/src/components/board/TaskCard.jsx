@@ -1,5 +1,4 @@
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useDraggable } from "@dnd-kit/core";
 import { Calendar } from "lucide-react";
 
 const priorityBorder = {
@@ -34,13 +33,13 @@ export function TaskCard({
     listeners,
     setNodeRef,
     transform,
-    transition,
     isDragging,
-  } = useSortable({ id, disabled: isDragDisabled });
+  } = useDraggable({ id, disabled: isDragDisabled });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
     opacity: isDragging ? 0.45 : 1,
   };
 
@@ -80,41 +79,6 @@ export function TaskCard({
           )}
         </div>
       </button>
-    </div>
-  );
-}
-
-/** Static clone for <DragOverlay /> — must not call useSortable. */
-export function TaskCardPreview({ title, priority, dueLabel }) {
-  return (
-    <div
-      className={`w-full rounded-lg border border-slate-200 dark:border-slate-700 border-l-4 ${
-        priorityBorder[priority] ?? "border-l-slate-300 dark:border-l-slate-600"
-      } bg-white dark:bg-slate-800 p-3 text-left shadow-card-lift ring-2 ring-steel/30`}
-    >
-      <p className="font-medium text-card-title text-slate-800 dark:text-slate-200 line-clamp-2">
-        {title}
-      </p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {priority && (
-          <span
-            className={`inline-flex items-center gap-1 text-small capitalize font-medium ${
-              priorityText[priority] ?? "text-slate-500"
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${priorityDot[priority] ?? "bg-slate-400"}`}
-            />
-            {priority}
-          </span>
-        )}
-        {dueLabel && (
-          <span className="inline-flex items-center gap-1 text-small text-slate-400 dark:text-slate-500">
-            <Calendar className="h-3 w-3" aria-hidden />
-            {dueLabel}
-          </span>
-        )}
-      </div>
     </div>
   );
 }

@@ -26,7 +26,7 @@ export function TaskDetailPanel({ task, stages, members, creatorEmail, role, onC
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
-  const canManageTaskFields = role === "owner";
+  const canEdit = role === "owner" || role === "participant";
   const canDelete = role === "owner";
 
   // Build assignee options: all members, fallback to creator
@@ -118,17 +118,6 @@ export function TaskDetailPanel({ task, stages, members, creatorEmail, role, onC
 
         {/* Body */}
         <div className="max-h-[70vh] overflow-auto p-5 space-y-4">
-          {role === "participant" && (
-            <p className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-small text-slate-600 dark:text-slate-400">
-              You can move tasks <strong>assigned to you</strong> on the board. Task details can only be
-              edited by the project owner.
-            </p>
-          )}
-          {role === "viewer" && (
-            <p className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-small text-slate-600 dark:text-slate-400">
-              You have read-only access. You cannot edit tasks or move cards.
-            </p>
-          )}
           {editing ? (
             <>
               <div className="space-y-1.5">
@@ -269,7 +258,7 @@ export function TaskDetailPanel({ task, stages, members, creatorEmail, role, onC
         </div>
 
         {/* Footer */}
-        {canManageTaskFields && (
+        {canEdit && (
           <div className="border-t border-slate-100 dark:border-slate-800 px-5 py-4 flex items-center justify-between gap-2">
             {canDelete && !editing && (
               <Button

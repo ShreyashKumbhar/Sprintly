@@ -1,8 +1,10 @@
 package com.example.sprintly.repository;
 
-import com.example.sprintly.model.Task;
-import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.example.sprintly.model.Task;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByProjectId(Long projectId);

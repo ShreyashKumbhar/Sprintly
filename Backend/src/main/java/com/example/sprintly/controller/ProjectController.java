@@ -1,20 +1,50 @@
 package com.example.sprintly.controller;
 
-import com.example.sprintly.dto.*;
-import com.example.sprintly.model.*;
-import com.example.sprintly.repository.*;
-import com.example.sprintly.security.RbacService;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.example.sprintly.dto.DashboardStatsResponse;
+import com.example.sprintly.dto.GanttTaskResponse;
+import com.example.sprintly.dto.MemberResponse;
+import com.example.sprintly.dto.ProjectRequest;
+import com.example.sprintly.dto.ProjectResponse;
+import com.example.sprintly.dto.TaskRequest;
+import com.example.sprintly.dto.TaskResponse;
+import com.example.sprintly.dto.TaskStatusHistoryResponse;
+import com.example.sprintly.dto.WorkflowStageRequest;
+import com.example.sprintly.dto.WorkflowStageResponse;
+import com.example.sprintly.model.Project;
+import com.example.sprintly.model.ProjectMember;
+import com.example.sprintly.model.Task;
+import com.example.sprintly.model.TaskPriority;
+import com.example.sprintly.model.TaskStatusHistory;
+import com.example.sprintly.model.User;
+import com.example.sprintly.model.UserRole;
+import com.example.sprintly.model.WorkflowStage;
+import com.example.sprintly.repository.ProjectMemberRepository;
+import com.example.sprintly.repository.ProjectRepository;
+import com.example.sprintly.repository.TaskRepository;
+import com.example.sprintly.repository.TaskStatusHistoryRepository;
+import com.example.sprintly.repository.UserRepository;
+import com.example.sprintly.repository.WorkflowStageRepository;
+import com.example.sprintly.security.RbacService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api")
@@ -217,7 +247,7 @@ public class ProjectController {
     @PostMapping("/projects/{projectId}/tasks")
     public ResponseEntity<TaskResponse> createTask(@PathVariable Long projectId,
                                                     @Valid @RequestBody TaskRequest req) {
-        rbacService.requireRole(projectId, UserRole.owner);
+        rbacService.requireRole(projectId, UserRole.owner, UserRole.participant);
 
         User creator = userRepository.findByEmail(rbacService.currentEmail()).orElseThrow();
         Project project = projectRepository.findById(projectId)
