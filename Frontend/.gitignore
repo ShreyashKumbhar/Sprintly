@@ -6,3 +6,4 @@ dist
 .DS_Store
 dsd.md
 package-lock.json
+.vercel
