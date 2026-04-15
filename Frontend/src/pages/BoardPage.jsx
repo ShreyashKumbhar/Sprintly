@@ -108,7 +108,7 @@ export function BoardPage() {
             description: `[${task.category}] ${task.description}`,
             priority: task.priority,
             dueDate: null,
-            assigneeEmail: null,
+            assigneeEmail: user?.email || null,
             stageId: todoStage.id,
           });
         } catch {

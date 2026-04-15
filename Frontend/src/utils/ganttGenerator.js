@@ -18,16 +18,16 @@ const DEFAULT_COLOR = { bar: "FFBDD7EE", border: "FF5B9BD5" }; // blue fallback
  *   { stageName, start: Date, end: Date|null }
  *
  * Rules:
- * - "To Do" entries are skipped (task hasn't started yet)
- * - "In Progress" entry marks a startedAt
- * - "Done" entry marks a completedAt
+ * - Every stage transition creates a segment (including "To Do")
+ * - "Done" entry closes at the moment it entered Done
  * - For the last segment, if end is null, use `now` as a temporary end
  * - Tasks can be reopened (moved back), producing multiple segments
  */
 function deriveSegments(task, now) {
   const history = task.statusHistory || [];
+
+  // No history — fallback to createdAt
   if (history.length === 0) {
-    // No history — fallback to createdAt if available
     if (task.createdAt) {
       return [{
         stageName: task.currentStage || "Unknown",
@@ -52,9 +52,6 @@ function deriveSegments(task, now) {
         prev.end = enteredAt;
       }
     }
-
-    // Skip "To Do" — task hasn't started work yet in this stage
-    if (stageName.toLowerCase() === "to do") continue;
 
     segments.push({
       stageName,
@@ -93,7 +90,7 @@ export async function generateGanttChart(projectName, ganttTasks) {
   const activeTasks = taskRows.filter((t) => t.segments.length > 0);
 
   if (activeTasks.length === 0) {
-    alert("No tasks with status history found. Move tasks to 'In Progress' to generate a Gantt chart.");
+    alert("No tasks found to generate a Gantt chart.");
     return;
   }
 

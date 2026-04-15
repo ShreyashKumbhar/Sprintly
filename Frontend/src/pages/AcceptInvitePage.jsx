@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { getInvitation, acceptInvitation } from "@/api/invitations";
 import { Button } from "@/components/ui/Button";
-import { Zap, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 
 export function AcceptInvitePage() {
   const { token } = useParams();
@@ -49,9 +49,7 @@ export function AcceptInvitePage() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Brand */}
         <div className="mb-6 flex items-center justify-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
+          <img src="/favicon.svg" alt="Sprintly" className="h-8 w-8" />
           <span className="font-display text-lg font-semibold text-slate-900 dark:text-slate-50">
             Sprintly
           </span>

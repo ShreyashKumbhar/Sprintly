@@ -7,6 +7,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { BoardPage } from "@/pages/BoardPage";
+import { InboxPage } from "@/pages/InboxPage";
 import { AcceptInvitePage } from "@/pages/AcceptInvitePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -70,6 +71,7 @@ export default function App() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/inbox" element={<InboxPage />} />
         <Route path="/board/:projectId?" element={<BoardPage />} />
       </Route>
       <Route path="/invite/:token" element={<AcceptInvitePage />} />

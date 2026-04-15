@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Kanban, Sun, Moon, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, Kanban, Inbox, Sun, Moon, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Avatar } from "@/components/ui/Avatar";
@@ -12,6 +12,7 @@ export function TopBar() {
   const navLinks = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { to: "/board", label: "Board", icon: Kanban, exact: false },
+    { to: "/inbox", label: "Inbox", icon: Inbox, exact: true },
   ];
 
   return (
@@ -22,9 +23,7 @@ export function TopBar() {
           to="/dashboard"
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white transition duration-150 hover:text-blue-600 dark:hover:text-blue-400"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
+          <img src="/favicon.svg" alt="Sprintly" className="h-7 w-7" />
           Sprintly
         </Link>
 

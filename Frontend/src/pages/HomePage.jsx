@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import {
-  Zap,
   Kanban,
   Users,
   BarChart3,
@@ -32,9 +31,7 @@ export function HomePage() {
       {/* Nav */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-6 lg:px-10">
         <div className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
-            <Zap className="h-4 w-4 text-white" />
-          </div>
+          <img src="/favicon.svg" alt="Sprintly" className="h-7 w-7" />
           Sprintly
         </div>
         <div className="flex items-center gap-3">

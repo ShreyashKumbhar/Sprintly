@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Zap } from "lucide-react";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -29,9 +28,7 @@ export function LoginPage() {
     <div className="space-y-6">
       {/* Brand */}
       <div className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg">
-          <Zap className="h-6 w-6 text-white" />
-        </div>
+        <img src="/favicon.svg" alt="Sprintly" className="mx-auto mb-4 h-12 w-12" />
         <h1 className="font-display text-2xl font-semibold text-slate-900 dark:text-slate-50">
           Welcome back
         </h1>
