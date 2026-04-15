@@ -35,7 +35,7 @@ export function SignupPage() {
     <div className="space-y-6">
       {/* Brand */}
       <div className="text-center">
-        <img src="/favicon.svg" alt="Sprintly" className="mx-auto mb-4 h-12 w-12" />
+        <img src="/logo.svg" alt="Sprintly" className="mx-auto mb-4 h-12 w-12" />
         <h1 className="font-display text-2xl font-semibold text-slate-900 dark:text-slate-50">
           Create account
         </h1>

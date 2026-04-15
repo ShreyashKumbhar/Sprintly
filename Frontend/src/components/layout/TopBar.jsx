@@ -23,7 +23,7 @@ export function TopBar() {
           to="/dashboard"
           className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white transition duration-150 hover:text-blue-600 dark:hover:text-blue-400"
         >
-          <img src="/favicon.svg" alt="Sprintly" className="h-7 w-7" />
+          <img src="/logo.svg" alt="Sprintly" className="h-7 w-7" />
           Sprintly
         </Link>
 

@@ -49,7 +49,7 @@ export function AcceptInvitePage() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Brand */}
         <div className="mb-6 flex items-center justify-center gap-2">
-          <img src="/favicon.svg" alt="Sprintly" className="h-8 w-8" />
+          <img src="/logo.svg" alt="Sprintly" className="h-8 w-8" />
           <span className="font-display text-lg font-semibold text-slate-900 dark:text-slate-50">
             Sprintly
           </span>
