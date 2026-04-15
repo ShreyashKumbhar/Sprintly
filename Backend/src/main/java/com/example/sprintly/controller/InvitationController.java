@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -34,6 +36,27 @@ public class InvitationController {
 
     @Autowired
     private RbacService rbacService;
+
+    // ── List my pending invitations (authenticated) ───────────────────────────
+
+    @GetMapping("/invitations/mine")
+    public List<InvitationDetailResponse> myInvitations() {
+        String email = rbacService.currentEmail();
+        return invitationRepository.findByEmailAndStatusOrderByCreatedAtDesc(email, InvitationStatus.pending)
+                .stream()
+                .filter(inv -> inv.getExpiresAt() == null || inv.getExpiresAt().isAfter(OffsetDateTime.now()))
+                .map(inv -> InvitationDetailResponse.builder()
+                        .id(inv.getId())
+                        .token(inv.getToken())
+                        .projectName(inv.getProject().getName())
+                        .projectDescription(inv.getProject().getDescription())
+                        .inviterEmail(inv.getInviter().getEmail())
+                        .role(inv.getRole().name())
+                        .status(inv.getStatus().name())
+                        .expiresAt(inv.getExpiresAt() != null ? inv.getExpiresAt().toString() : null)
+                        .build())
+                .collect(Collectors.toList());
+    }
 
     // ── Send invitation (Owner only) ─────────────────────────────────────────
 
@@ -57,13 +80,24 @@ public class InvitationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot invite as owner");
         }
 
+        // Resolve email: either provided directly or looked up by username
+        String targetEmail = req.getEmail();
+        if ((targetEmail == null || targetEmail.isBlank()) && req.getUsername() != null && !req.getUsername().isBlank()) {
+            User found = userRepository.findByUsername(req.getUsername())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No user found with username '" + req.getUsername() + "'"));
+            targetEmail = found.getEmail();
+        }
+        if (targetEmail == null || targetEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either email or username is required");
+        }
+
         // Prevent duplicate pending invitations
-        if (invitationRepository.existsByProjectIdAndEmailAndStatus(projectId, req.getEmail(), InvitationStatus.pending)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "A pending invitation already exists for this email");
+        if (invitationRepository.existsByProjectIdAndEmailAndStatus(projectId, targetEmail, InvitationStatus.pending)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A pending invitation already exists for this user");
         }
 
         // Also prevent inviting someone who is already a member
-        if (projectMemberRepository.existsByProjectIdAndUserEmail(projectId, req.getEmail())) {
+        if (projectMemberRepository.existsByProjectIdAndUserEmail(projectId, targetEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already a member of this project");
         }
 
@@ -75,7 +109,7 @@ public class InvitationController {
 
         Invitation invitation = Invitation.builder()
                 .project(project)
-                .email(req.getEmail())
+                .email(targetEmail)
                 .token(token)
                 .role(role)
                 .inviter(inviter)

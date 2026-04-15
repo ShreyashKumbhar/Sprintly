@@ -7,6 +7,7 @@ import lombok.Data;
 @Builder
 public class InvitationDetailResponse {
     private Long id;
+    private String token;
     private String projectName;
     private String projectDescription;
     private String inviterEmail;
