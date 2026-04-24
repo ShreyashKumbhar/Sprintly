@@ -22,3 +22,8 @@
 # !.claude/settings.json
 # !.claude/rules/
 # !.claude/skills/
+
+### Environment files ###
+.env
+.env.*
+!.env.example

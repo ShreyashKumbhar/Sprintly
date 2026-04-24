@@ -7,3 +7,4 @@ dist
 dsd.md
 package-lock.json
 .vercel
+.env.production
