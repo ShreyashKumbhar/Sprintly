@@ -3,6 +3,7 @@ package com.example.sprintly.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,9 +40,16 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        String normalizedEmail = normalizeEmail(loginRequest.getEmail());
+        String password = loginRequest.getPassword() == null ? "" : loginRequest.getPassword();
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, password));
+        } catch (BadCredentialsException ex) {
+            return ResponseEntity.status(401).body("Invalid email or password.");
+        }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
@@ -53,13 +61,17 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
-        if (userRepository.findByEmail(signUpRequest.getEmail()).isPresent()) {
+        String normalizedEmail = normalizeEmail(signUpRequest.getEmail());
+        String normalizedUsername = normalizeUsername(signUpRequest.getUsername());
+        String password = signUpRequest.getPassword() == null ? "" : signUpRequest.getPassword();
+
+        if (userRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
             return ResponseEntity
                     .badRequest()
                     .body("Error: Email is already in use!");
         }
 
-        if (userRepository.existsByUsername(signUpRequest.getUsername())) {
+        if (userRepository.existsByUsername(normalizedUsername)) {
             return ResponseEntity
                     .badRequest()
                     .body("Error: Username is already taken!");
@@ -67,13 +79,21 @@ public class AuthController {
 
         // Create new user's account
         User user = User.builder()
-                .email(signUpRequest.getEmail())
-                .password(encoder.encode(signUpRequest.getPassword()))
-                .username(signUpRequest.getUsername())
+                .email(normalizedEmail)
+                .password(encoder.encode(password))
+                .username(normalizedUsername)
                 .build();
 
         userRepository.save(user);
 
         return ResponseEntity.ok("User registered successfully!");
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private String normalizeUsername(String username) {
+        return username == null ? "" : username.trim();
     }
 }

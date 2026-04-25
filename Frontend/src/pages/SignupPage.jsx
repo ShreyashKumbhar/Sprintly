@@ -18,7 +18,7 @@ export function SignupPage() {
     setError("");
     setLoading(true);
     try {
-      await signup({ email, password, username });
+      await signup({ email: email.trim(), password, username: username.trim() });
       navigate("/login", { replace: true });
     } catch (err) {
       setError(

@@ -16,7 +16,7 @@ export function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login({ email, password });
+      await login({ email: email.trim(), password });
     } catch (err) {
       setError(err.message || "Sign in failed. Check your credentials.");
     } finally {
