@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Root stack for Sprintly deployment using nested CloudFormation stacks.
+  This stack deploys the VPC, backend, frontend, and CICD stacks as nested stacks.
+
+Parameters:
+  DeploymentBucket:
+    Type: String
+    Description: S3 bucket name where nested templates are stored
+  GitHubRepository:
+    Type: String
+    Description: GitHub repository in owner/name format
+  GitHubBranch:
+    Type: String
+    Default: main
+    Description: Branch name to build from
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Password for the RDS administrator user
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    Description: JWT secret used by the backend
+  DBUsername:
+    Type: String
+    Default: postgres
+    Description: Database administrator username for RDS
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${DeploymentBucket}.s3.${AWS::Region}.amazonaws.com/cloudformation/vpc.yml'
+
+  BackendStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: VpcStack
+    Properties:
+      TemplateURL: !Sub 'https://${DeploymentBucket}.s3.${AWS::Region}.amazonaws.com/cloudformation/backend.yml'
+      Parameters:
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        PublicSubnetIds: !GetAtt VpcStack.Outputs.PublicSubnetIds
+        PrivateSubnetIds: !GetAtt VpcStack.Outputs.PrivateSubnetIds
+        DBUsername: !Ref DBUsername
+        DBPassword: !Ref DBPassword
+        JWTSecret: !Ref JWTSecret
+
+  FrontendStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${DeploymentBucket}.s3.${AWS::Region}.amazonaws.com/cloudformation/frontend.yml'
+
+  PipelineStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - BackendStack
+      - FrontendStack
+    Properties:
+      TemplateURL: !Sub 'https://${DeploymentBucket}.s3.${AWS::Region}.amazonaws.com/cloudformation/pipeline.yml'
+      Parameters:
+        GitHubRepository: !Ref GitHubRepository
+        GitHubBranch: !Ref GitHubBranch
+        FrontendBucketName: !GetAtt FrontendStack.Outputs.FrontendBucketName
+        CloudFrontDistributionId: !GetAtt FrontendStack.Outputs.CloudFrontDistributionId
+        BackendApiUrl: !Sub
+          - http://${BackendDns}
+          - BackendDns: !GetAtt BackendStack.Outputs.BackendLoadBalancerDns
+
+Outputs:
+  FrontendDomainName:
+    Description: CloudFront domain for the frontend
+    Value: !GetAtt FrontendStack.Outputs.CloudFrontDomainName
+
+  BackendUrl:
+    Description: Backend load balancer DNS name
+    Value: !GetAtt BackendStack.Outputs.BackendLoadBalancerDns
+
+  PipelineName:
+    Description: CodePipeline name
+    Value: !GetAtt PipelineStack.Outputs.PipelineName

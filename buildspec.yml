@@ -1,0 +1,38 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto21
+      nodejs: 20
+    commands:
+      - echo Installing frontend dependencies
+      - cd Frontend
+      - npm ci
+      - cd ..
+  build:
+    commands:
+      - echo Building backend artifact
+      - cd Backend
+      - chmod +x mvnw
+      - ./mvnw clean package -DskipTests
+      - JAR_PATH=$(ls -1 target/*.jar | grep -v "original-" | head -n 1)
+      - cp "$JAR_PATH" ../backend.jar
+      - cd ..
+      - echo Building frontend static assets
+      - cd Frontend
+      - export VITE_API_BASE_URL="$VITE_API_BASE_URL"
+      - npm run build
+      - cd ..
+  post_build:
+    commands:
+      - echo Syncing frontend build to S3
+      - aws s3 sync Frontend/dist "s3://${FRONTEND_BUCKET_NAME}" --delete
+      - echo Invalidating CloudFront cache
+      - aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/*"
+
+artifacts:
+  files:
+    - backend.jar
+    - appspec.yml
+    - scripts/**/*
