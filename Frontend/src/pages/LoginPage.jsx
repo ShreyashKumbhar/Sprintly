@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -76,10 +75,7 @@ export function LoginPage() {
       </div>
 
       <p className="text-center text-small text-slate-500 dark:text-slate-400">
-        No account?{" "}
-        <Link to="/signup" className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
-          Create one
-        </Link>
+        Open access mode enabled for this deployment.
       </p>
     </div>
   );

@@ -2,14 +2,12 @@ package com.example.sprintly.security;
 
 import com.example.sprintly.model.UserRole;
 import com.example.sprintly.repository.ProjectMemberRepository;
+import com.example.sprintly.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
 import java.util.Optional;
 
 @Service
@@ -18,9 +16,19 @@ public class RbacService {
     @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private static final String OPEN_ACCESS_EMAIL = "guest@sprintly.local";
+
     public String currentEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getName();
+        String email = auth != null ? auth.getName() : null;
+        if (email == null || email.isBlank() || "anonymousUser".equalsIgnoreCase(email)) {
+            email = OPEN_ACCESS_EMAIL;
+        }
+        ensureOpenAccessUser(email);
+        return email;
     }
 
     public Optional<UserRole> getRole(Long projectId) {
@@ -29,17 +37,27 @@ public class RbacService {
 
     /** Throws 403 if current user does not have one of the allowed roles in the project. */
     public UserRole requireRole(Long projectId, UserRole... allowed) {
-        UserRole role = getRole(projectId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this project"));
-        if (Arrays.stream(allowed).noneMatch(r -> r == role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Insufficient permissions");
-        }
-        return role;
+        // Open-access mode for academic deployments: skip role enforcement.
+        return UserRole.owner;
     }
 
     public boolean hasRole(Long projectId, UserRole... allowed) {
-        return getRole(projectId)
-                .map(role -> Arrays.stream(allowed).anyMatch(r -> r == role))
-                .orElse(false);
+        return true;
+    }
+
+    private void ensureOpenAccessUser(String email) {
+        if (userRepository.findByEmailIgnoreCase(email).isPresent()) {
+            return;
+        }
+        String username = "guest";
+        int suffix = 1;
+        while (userRepository.existsByUsername(username)) {
+            username = "guest_" + suffix++;
+        }
+        userRepository.save(com.example.sprintly.model.User.builder()
+                .email(email)
+                .password("open-access")
+                .username(username)
+                .build());
     }
 }

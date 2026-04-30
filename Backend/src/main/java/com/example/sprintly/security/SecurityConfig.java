@@ -61,13 +61,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers("/api/auth/**").permitAll()
-                                .requestMatchers("/error", "/health").permitAll()
-                                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/invitations/mine").authenticated()
-                                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/invitations/*").permitAll()
-                                .anyRequest().authenticated()
+                        auth.anyRequest().permitAll()
                 );
 
+        // Keep JWT components wired for compatibility, but do not enforce auth.
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
